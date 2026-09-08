@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Administration — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link active" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link active" href="admin.html#users">Users</a>
+      <a class="nav-link active" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1>Administration</h1>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="facilities">Facilities</button>
+      <button class="tab-btn" data-tab="departments">Departments</button>
+      <button class="tab-btn" data-tab="users">Users</button>
+      <button class="tab-btn" data-tab="audit">Audit Logs</button>
+    </div>
+
+    <!-- FACILITIES -->
+    <div class="tab-panel active" id="tab-facilities">
+      <div class="panel">
+        <div class="panel-header"><h3>Add facility</h3></div>
+        <div class="panel-body">
+          <form id="facilityForm">
+            <div class="grid-2">
+              <div class="field"><label>Facility code</label><input type="text" id="fac_code" required placeholder="e.g. SOR-01"></div>
+              <div class="field"><label>Name</label><input type="text" id="fac_name" required></div>
+              <div class="field">
+                <label>Type</label>
+                <select id="fac_type">
+                  <option>CLINIC</option><option>MEDICAL_CENTRE</option>
+                  <option>HEALTH_CENTRE</option><option>HOSPITAL</option>
+                  <option>SPECIALIST_HOSPITAL</option>
+                </select>
+              </div>
+              <div class="field"><label>Ownership</label><input type="text" id="fac_ownership" placeholder="Government / Private / NGO"></div>
+              <div class="field"><label>District</label><input type="text" id="fac_district"></div>
+              <div class="field"><label>Phone</label><input type="text" id="fac_phone"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add facility</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Facilities</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Code</th><th>Name</th><th>Type</th><th>District</th><th>Status</th></tr></thead>
+            <tbody id="facilitiesTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPARTMENTS -->
+    <div class="tab-panel" id="tab-departments">
+      <div class="panel">
+        <div class="panel-header"><h3>Add department</h3></div>
+        <div class="panel-body">
+          <form id="departmentForm">
+            <div class="grid-2">
+              <div class="field">
+                <label>Facility</label>
+                <select id="dept_facility" required></select>
+              </div>
+              <div class="field"><label>Department code</label><input type="text" id="dept_code" required placeholder="e.g. OPD"></div>
+              <div class="field"><label>Name</label><input type="text" id="dept_name" required></div>
+              <div class="field"><label>Type</label><input type="text" id="dept_type" placeholder="Clinical / Diagnostic / Support"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add department</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Departments</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Code</th><th>Name</th><th>Facility</th><th>Status</th></tr></thead>
+            <tbody id="departmentsTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="tab-panel" id="tab-users">
+      <div class="panel">
+        <div class="panel-header"><h3>Staff accounts</h3></div>
+        <div class="panel-body">
+          <p class="empty" style="padding-top:0;">Staff request access via the "Request access" link on the sign-in page. Approve pending accounts and assign their role, facility and department here.</p>
+          <table>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Facility</th><th>Department</th><th>Status</th><th></th></tr></thead>
+            <tbody id="usersTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT -->
+    <div class="tab-panel" id="tab-audit">
+      <div class="panel">
+        <div class="panel-header"><h3>Audit logs</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Time</th><th>User</th><th>Action</th><th>Module</th><th>Record</th></tr></thead>
+            <tbody id="auditTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Edit user modal (simple inline panel, no library) -->
+<div id="editUserOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:420px; margin:0;">
+    <div class="panel-header"><h3>Edit user</h3></div>
+    <div class="panel-body">
+      <form id="editUserForm">
+        <input type="hidden" id="eu_id">
+        <div class="field"><label>Full name</label><input type="text" id="eu_name" required></div>
+        <div class="field">
+          <label>Role</label>
+          <select id="eu_role"></select>
+        </div>
+        <div class="field">
+          <label>Facility</label>
+          <select id="eu_facility"></select>
+        </div>
+        <div class="field">
+          <label>Department</label>
+          <select id="eu_department"></select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="eu_status">
+            <option>PENDING</option><option>ACTIVE</option><option>INACTIVE</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditUser">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
