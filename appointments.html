@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appointments — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link active" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Appointments</h1></div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Book appointment</h3></div>
+      <div class="panel-body">
+        <form id="apptForm">
+          <div class="field">
+            <label>Patient</label>
+            <input type="text" id="a_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+            <div id="patientResults" style="margin-top:6px;"></div>
+            <input type="hidden" id="a_patient_id">
+            <div id="selectedPatient" style="margin-top:8px;"></div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Department</label>
+              <select id="a_department"><option value="">— none —</option></select>
+            </div>
+            <div class="field">
+              <label>Provider</label>
+              <select id="a_provider"><option value="">— none —</option></select>
+            </div>
+            <div class="field"><label>Date</label><input type="date" id="a_date" required></div>
+            <div class="field"><label>Time</label><input type="time" id="a_time"></div>
+          </div>
+          <div class="field"><label>Reason for visit</label><input type="text" id="a_reason"></div>
+          <button type="submit" class="btn btn-primary">Book appointment</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Today's queue</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Time</th><th>Patient</th><th>Department</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+          <tbody id="queueTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Upcoming appointments</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Date</th><th class="mono">Time</th><th>Patient</th><th>Department</th><th></th></tr></thead>
+          <tbody id="upcomingTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/appointments.js"></script>
+</body>
+</html>
