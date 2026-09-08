@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HCMIS — Hospital and Clinic Management Information System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-screen">
+
+  <div class="login-aside">
+    <div>
+      <h1>One record.<br>Every department.<br>One patient at a time.</h1>
+      <p>HCMIS brings registration, consultation, laboratory, pharmacy, billing and administration onto a single, auditable platform.</p>
+
+      <svg class="vital-line" viewBox="0 0 460 80" fill="none">
+        <polyline points="0,40 60,40 80,40 95,10 110,70 125,20 140,40 200,40 220,40 235,15 250,65 265,25 280,40 340,40 360,40 375,12 390,68 405,22 420,40 460,40"
+          stroke="#5FBBA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="login-main">
+    <div class="login-box">
+      <div class="brand">HCMIS</div>
+      <h2>Sign in</h2>
+      <p class="sub">Staff Portal</p>
+
+      <div id="formMsg"></div>
+
+      <form id="loginForm">
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Sign in</button>
+      </form>
+
+      <p class="sub" style="margin-top:18px;">New staff member? <a href="register.html">Request access</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>
