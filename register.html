@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request Access — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-screen">
+
+  <div class="login-aside">
+    <div>
+      <h1>Request a staff account</h1>
+      <p>Your account will be created immediately, but stays inactive until a facility administrator reviews and approves it.</p>
+      <svg class="vital-line" viewBox="0 0 460 80" fill="none">
+        <polyline points="0,40 60,40 80,40 95,10 110,70 125,20 140,40 200,40 220,40 235,15 250,65 265,25 280,40 340,40 360,40 375,12 390,68 405,22 420,40 460,40"
+          stroke="#5FBBA9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="login-main">
+    <div class="login-box">
+      <div class="brand">HCMIS</div>
+      <h2>Request access</h2>
+      <p class="sub">Staff Portal</p>
+
+      <div id="formMsg"></div>
+
+      <form id="registerForm">
+        <div class="field">
+          <label for="fullName">Full name</label>
+          <input type="text" id="fullName" required>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input type="text" id="phone">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" required minlength="6" autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="registerBtn">Request access</button>
+      </form>
+
+      <p class="sub" style="margin-top:18px;"><a href="index.html">Back to sign in</a></p>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/register.js"></script>
+</body>
+</html>
