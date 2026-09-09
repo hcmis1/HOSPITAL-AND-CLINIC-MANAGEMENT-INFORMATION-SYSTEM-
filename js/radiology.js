@@ -81,7 +81,7 @@ async function loadPending() {
 async function loadCompleted() {
   const items = await fetchItems(['COMPLETED']);
   const tbody = document.getElementById('completedTable');
-  if (items.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No completed reports yet.</td></tr>'; return; }
+  if (items.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No completed reports yet.</td></tr>'; return; }
   tbody.innerHTML = items.slice(0, 50).map(i => {
     const r = i.imaging_reports && i.imaging_reports[0];
     return `
@@ -90,8 +90,25 @@ async function loadCompleted() {
       <td>${i.imaging_orders.patients.first_name} ${i.imaging_orders.patients.last_name} · ${i.imaging_orders.patients.mrn}</td>
       <td>${i.service_name}</td>
       <td>${r ? r.impression || '—' : '—'}</td>
+      <td><button class="link-btn" onclick='printRadiologyResult(${JSON.stringify(i).replace(/'/g, "&apos;")})'>Print</button></td>
     </tr>`;
   }).join('');
+}
+
+function printRadiologyResult(item) {
+  const r = item.imaging_reports && item.imaging_reports[0];
+  const body = `
+    <div class="row"><span class="label">Order</span><span class="mono">${item.imaging_orders.order_number}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${item.imaging_orders.patients.first_name} ${item.imaging_orders.patients.last_name} · ${item.imaging_orders.patients.mrn}</span></div>
+    <div class="row"><span class="label">Service</span><span>${item.service_name} ${item.modality ? '(' + item.modality + ')' : ''}</span></div>
+    ${r ? `
+      <p><strong>Findings</strong><br>${r.findings || '—'}</p>
+      <p><strong>Impression</strong><br>${r.impression || '—'}</p>
+      ${r.recommendations ? `<p><strong>Recommendations</strong><br>${r.recommendations}</p>` : ''}
+    ` : '<p>No report on file.</p>'}
+    <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Radiology report</p>
+  `;
+  openPrintDocument('Radiology Result — ' + item.imaging_orders.order_number, meR.facilities ? meR.facilities.name : 'HCMIS', body);
 }
 
 function openReportForm(itemId, serviceName) {
