@@ -162,6 +162,7 @@
               <label>Certainty</label>
               <select id="d_certainty"><option value="CONFIRMED">Confirmed</option><option value="SUSPECTED">Suspected</option><option value="RULED_OUT">Ruled out</option></select>
             </div>
+            <div class="field"><label>Code (optional)</label><input type="text" id="d_code" placeholder="e.g. ICD-10 code"></div>
           </div>
           <button class="btn btn-secondary" id="addDiagBtn">Add diagnosis</button>
         </fieldset>
@@ -203,7 +204,8 @@
             <div class="field"><label>Clinical information</label><input type="text" id="lab_clinical_info"></div>
           </div>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="lab_test_name" placeholder="Test name (e.g. Full Haemogram)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <input type="text" id="lab_test_name" list="labTestsDatalist" placeholder="Test name (e.g. Full Haemogram)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <datalist id="labTestsDatalist"></datalist>
             <button type="button" class="btn btn-secondary" id="addLabTestBtn">Add test</button>
           </div>
         </fieldset>
@@ -224,10 +226,31 @@
             <div class="field"><label>Clinical indication</label><input type="text" id="img_indication"></div>
           </div>
           <div style="display:flex; gap:8px;">
-            <input type="text" id="img_service_name" placeholder="Service (e.g. Chest X-ray)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <input type="text" id="img_service_name" list="imgServicesDatalist" placeholder="Service (e.g. Chest X-ray)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <datalist id="imgServicesDatalist"></datalist>
             <input type="text" id="img_modality" placeholder="Modality (X-ray / Ultrasound / CT…)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
             <button type="button" class="btn btn-secondary" id="addImgServiceBtn">Add</button>
           </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- REFERRAL -->
+    <div class="panel">
+      <div class="panel-header"><h3>Referral</h3></div>
+      <div class="panel-body">
+        <div id="referralList" style="margin-bottom:14px;"></div>
+        <fieldset id="referralFieldset">
+          <div class="grid-2">
+            <div class="field"><label>Receiving facility</label><input type="text" id="ref_facility" required></div>
+            <div class="field">
+              <label>Urgency</label>
+              <select id="ref_urgency"><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="EMERGENCY">Emergency</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Reason for referral</label><input type="text" id="ref_reason"></div>
+          <div class="field"><label>Clinical summary</label><input type="text" id="ref_summary"></div>
+          <button type="button" class="btn btn-secondary" id="createReferralBtn">Create referral</button>
         </fieldset>
       </div>
     </div>
