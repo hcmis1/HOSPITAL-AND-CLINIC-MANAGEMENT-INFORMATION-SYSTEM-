@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pharmacy — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Pharmacy</div>
+      <a class="nav-link active" href="pharmacy.html">Pharmacy</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Pharmacy</h1></div>
+
+    <div class="panel" id="alertsPanel" style="display:none; border-color:var(--hc-amber);">
+      <div class="panel-header"><h3 style="color:var(--hc-amber);">⚠ Stock alerts</h3></div>
+      <div class="panel-body"><div id="alertsList"></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dispense">Dispensing queue</button>
+      <button class="tab-btn" data-tab="catalogue">Medicine catalogue</button>
+      <button class="tab-btn" data-tab="stock">Stock / batches</button>
+    </div>
+
+    <!-- DISPENSING QUEUE -->
+    <div class="tab-panel active" id="tab-dispense">
+      <div class="panel">
+        <div class="panel-body" id="queueBody">
+          <p class="empty">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATALOGUE -->
+    <div class="tab-panel" id="tab-catalogue">
+      <div class="panel">
+        <div class="panel-header"><h3>Add medicine</h3></div>
+        <div class="panel-body">
+          <form id="medForm">
+            <div class="grid-2">
+              <div class="field"><label>Generic name</label><input type="text" id="m_generic" required></div>
+              <div class="field"><label>Brand name</label><input type="text" id="m_brand"></div>
+              <div class="field"><label>Strength</label><input type="text" id="m_strength" placeholder="e.g. 500mg"></div>
+              <div class="field"><label>Dosage form</label><input type="text" id="m_form" placeholder="Tablet / Syrup / Injection"></div>
+              <div class="field"><label>Unit</label><input type="text" id="m_unit" value="tablet"></div>
+              <div class="field"><label>Reorder level</label><input type="number" id="m_reorder" value="0"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add medicine</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Catalogue</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Medicine</th><th>Strength</th><th>Form</th><th>In stock</th><th>Reorder level</th><th></th></tr></thead>
+            <tbody id="catalogueTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STOCK -->
+    <div class="tab-panel" id="tab-stock">
+      <div class="panel">
+        <div class="panel-header"><h3>Batches</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Medicine</th><th class="mono">Batch</th><th class="mono">Expiry</th><th>Quantity</th><th>Status</th></tr></thead>
+            <tbody id="stockTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Add stock overlay -->
+<div id="stockOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:420px; margin:16px;">
+    <div class="panel-header"><h3 id="stockTitle">Add stock</h3></div>
+    <div class="panel-body">
+      <form id="stockForm">
+        <input type="hidden" id="s_medicine_id">
+        <div class="field"><label>Batch number</label><input type="text" id="s_batch"></div>
+        <div class="field"><label>Expiry date</label><input type="date" id="s_expiry" required></div>
+        <div class="field"><label>Quantity</label><input type="number" id="s_qty" required></div>
+        <div class="field"><label>Unit cost</label><input type="number" step="0.01" id="s_cost"></div>
+        <div class="field"><label>Selling price</label><input type="number" step="0.01" id="s_price"></div>
+        <div class="field"><label>Supplier</label><input type="text" id="s_supplier"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Save batch</button>
+          <button type="button" class="btn btn-secondary" id="cancelStockBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Dispense item overlay -->
+<div id="dispenseOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:420px; margin:16px;">
+    <div class="panel-header"><h3 id="dispenseTitle">Dispense</h3></div>
+    <div class="panel-body">
+      <form id="dispenseForm">
+        <input type="hidden" id="disp_item_id">
+        <input type="hidden" id="disp_prescription_id">
+        <div class="field">
+          <label>Medicine (from catalogue)</label>
+          <select id="disp_medicine" required></select>
+        </div>
+        <div class="field"><label>Quantity</label><input type="number" id="disp_qty" required></div>
+        <p class="empty" id="disp_stock_hint"></p>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Dispense</button>
+          <button type="button" class="btn btn-secondary" id="cancelDispenseBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/pharmacy.js"></script>
+</body>
+</html>
