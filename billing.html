@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Pharmacy</div>
+      <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Finance</div>
+      <a class="nav-link active" href="billing.html">Billing</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Billing</h1></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Collected today</div><div class="value" id="statToday">–</div></div>
+      <div class="stat-card"><div class="label">Outstanding</div><div class="value" id="statOutstanding">–</div></div>
+      <div class="stat-card"><div class="label">Open invoices</div><div class="value" id="statOpen">–</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="invoices">Invoices</button>
+      <button class="tab-btn" data-tab="catalogue">Service catalogue</button>
+    </div>
+
+    <!-- INVOICES -->
+    <div class="tab-panel active" id="tab-invoices">
+      <div class="panel">
+        <div class="panel-body">
+          <div class="field" style="margin-bottom:0;">
+            <label>Search by patient name or MRN</label>
+            <input type="text" id="invSearch" placeholder="Start typing…">
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Invoice</th><th>Patient</th><th class="mono">Date</th><th>Total</th><th>Balance</th><th>Status</th><th></th></tr></thead>
+            <tbody id="invoicesTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Invoice detail -->
+      <div class="panel" id="invoiceDetail" style="display:none;">
+        <div class="panel-header">
+          <h3 id="invTitle">Invoice</h3>
+          <button class="link-btn" onclick="closeInvoiceDetail()">Close</button>
+        </div>
+        <div class="panel-body">
+          <div id="invMeta" style="margin-bottom:14px;"></div>
+          <table style="margin-bottom:14px;">
+            <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Total</th><th>Source</th></tr></thead>
+            <tbody id="invItemsTable"></tbody>
+          </table>
+
+          <fieldset id="invFieldset">
+            <div style="display:flex; gap:8px; margin-bottom:18px;">
+              <input type="text" id="mi_desc" placeholder="Description" style="flex:2; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <input type="number" id="mi_qty" placeholder="Qty" value="1" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <input type="number" id="mi_price" placeholder="Unit price" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <button type="button" class="btn btn-secondary" id="addManualItemBtn">Add item</button>
+            </div>
+
+            <h4 style="font-size:.9rem;">Record payment</h4>
+            <div class="grid-2">
+              <div class="field"><label>Amount</label><input type="number" step="0.01" id="pay_amount"></div>
+              <div class="field">
+                <label>Method</label>
+                <select id="pay_method"><option>CASH</option><option>MOBILE_MONEY</option><option>BANK</option><option>CARD</option><option>INSURANCE</option><option>OTHER</option></select>
+              </div>
+              <div class="field"><label>Reference (optional)</label><input type="text" id="pay_ref"></div>
+            </div>
+            <button type="button" class="btn btn-primary" id="recordPaymentBtn">Record payment</button>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATALOGUE -->
+    <div class="tab-panel" id="tab-catalogue">
+      <div class="panel">
+        <div class="panel-header"><h3>Add service</h3></div>
+        <div class="panel-body">
+          <form id="serviceForm">
+            <div class="grid-2">
+              <div class="field"><label>Service name</label><input type="text" id="sv_name" required></div>
+              <div class="field">
+                <label>Category</label>
+                <select id="sv_category">
+                  <option value="CONSULTATION">Consultation</option>
+                  <option value="LABORATORY">Laboratory</option>
+                  <option value="RADIOLOGY">Radiology</option>
+                  <option value="PHARMACY">Pharmacy</option>
+                  <option value="PROCEDURE">Procedure</option>
+                  <option value="BED">Bed</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div class="field"><label>Standard price</label><input type="number" step="0.01" id="sv_price" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add service</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Catalogue</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Service</th><th>Category</th><th>Price</th></tr></thead>
+            <tbody id="serviceTable"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/billing-helpers.js"></script>
+<script src="js/billing.js"></script>
+</body>
+</html>
