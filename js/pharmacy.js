@@ -72,7 +72,7 @@ function renderCatalogue() {
 
 function renderStock() {
   const tbody = document.getElementById('stockTable');
-  if (batchesCache.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No stock recorded yet.</td></tr>'; return; }
+  if (batchesCache.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No stock recorded yet.</td></tr>'; return; }
   const today = new Date();
   tbody.innerHTML = batchesCache.map(b => {
     const expired = new Date(b.expiry_date) < today;
@@ -85,8 +85,74 @@ function renderStock() {
         <td class="mono">${b.expiry_date}</td>
         <td>${b.quantity} ${b.medicines ? b.medicines.unit : ''}</td>
         <td><span class="pill ${displayStatus === 'ACTIVE' ? 'active' : 'inactive'}">${displayStatus}</span></td>
+        <td>
+          <button class="link-btn" onclick="adjustBatch('${b.id}')">Adjust</button> ·
+          <button class="link-btn" onclick="markDamaged('${b.id}')">Damaged</button> ·
+          <button class="link-btn" onclick="returnBatch('${b.id}')">Return</button>
+        </td>
       </tr>`;
   }).join('');
+}
+
+async function adjustBatch(batchId) {
+  const batch = batchesCache.find(b => b.id === batchId);
+  if (!batch) return;
+  const newQtyStr = prompt(`Current quantity: ${batch.quantity}. Enter corrected quantity:`, batch.quantity);
+  if (newQtyStr === null) return;
+  const newQty = parseInt(newQtyStr);
+  if (isNaN(newQty) || newQty < 0) { alert('Enter a valid quantity.'); return; }
+  const reason = prompt('Reason for adjustment:') || '';
+  const diff = newQty - batch.quantity;
+
+  await supabaseClient.from('medicine_batches').update({ quantity: newQty, status: newQty <= 0 ? 'DEPLETED' : 'ACTIVE' }).eq('id', batchId);
+  await supabaseClient.from('stock_movements').insert({
+    medicine_id: batch.medicine_id, batch_id: batchId, movement_type: 'ADJUSTMENT',
+    quantity: diff, reference_type: 'MANUAL', performed_by: meP.id
+  });
+  await logAudit('UPDATE', 'PHARMACY', 'medicine_batches', batchId, null, { quantity: newQty, reason });
+
+  await loadCatalogueAndStock();
+  await loadAlerts();
+}
+
+async function markDamaged(batchId) {
+  const batch = batchesCache.find(b => b.id === batchId);
+  if (!batch) return;
+  const qtyStr = prompt(`Quantity damaged (available: ${batch.quantity}):`, '0');
+  if (qtyStr === null) return;
+  const qty = parseInt(qtyStr);
+  if (isNaN(qty) || qty <= 0 || qty > batch.quantity) { alert('Enter a valid quantity.'); return; }
+  const newQty = batch.quantity - qty;
+
+  await supabaseClient.from('medicine_batches').update({ quantity: newQty, status: newQty <= 0 ? 'DEPLETED' : 'ACTIVE' }).eq('id', batchId);
+  await supabaseClient.from('stock_movements').insert({
+    medicine_id: batch.medicine_id, batch_id: batchId, movement_type: 'DAMAGE',
+    quantity: -qty, reference_type: 'MANUAL', performed_by: meP.id
+  });
+  await logAudit('UPDATE', 'PHARMACY', 'medicine_batches', batchId, null, { damaged: qty });
+
+  await loadCatalogueAndStock();
+  await loadAlerts();
+}
+
+async function returnBatch(batchId) {
+  const batch = batchesCache.find(b => b.id === batchId);
+  if (!batch) return;
+  const qtyStr = prompt(`Quantity to return to supplier (available: ${batch.quantity}):`, '0');
+  if (qtyStr === null) return;
+  const qty = parseInt(qtyStr);
+  if (isNaN(qty) || qty <= 0 || qty > batch.quantity) { alert('Enter a valid quantity.'); return; }
+  const newQty = batch.quantity - qty;
+
+  await supabaseClient.from('medicine_batches').update({ quantity: newQty, status: newQty <= 0 ? 'DEPLETED' : 'ACTIVE' }).eq('id', batchId);
+  await supabaseClient.from('stock_movements').insert({
+    medicine_id: batch.medicine_id, batch_id: batchId, movement_type: 'RETURN',
+    quantity: -qty, reference_type: 'MANUAL', performed_by: meP.id
+  });
+  await logAudit('UPDATE', 'PHARMACY', 'medicine_batches', batchId, null, { returned: qty });
+
+  await loadCatalogueAndStock();
+  await loadAlerts();
 }
 
 async function loadAlerts() {
