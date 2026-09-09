@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radiology — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link active" href="radiology.html">Radiology</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Radiology</h1></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="pending">Pending</button>
+      <button class="tab-btn" data-tab="completed">Completed</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-pending">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Service</th><th>Priority</th><th></th></tr></thead>
+            <tbody id="pendingTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-completed">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Service</th><th>Impression</th></tr></thead>
+            <tbody id="completedTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Report overlay -->
+<div id="reportOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:460px; margin:16px;">
+    <div class="panel-header"><h3 id="reportTitle">Report</h3></div>
+    <div class="panel-body">
+      <form id="reportForm">
+        <input type="hidden" id="rep_item_id">
+        <div class="field"><label>Findings</label><input type="text" id="rep_findings"></div>
+        <div class="field"><label>Impression</label><input type="text" id="rep_impression"></div>
+        <div class="field"><label>Recommendations</label><input type="text" id="rep_recommendations"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Save report</button>
+          <button type="button" class="btn btn-secondary" id="cancelReportBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/radiology.js"></script>
+</body>
+</html>
