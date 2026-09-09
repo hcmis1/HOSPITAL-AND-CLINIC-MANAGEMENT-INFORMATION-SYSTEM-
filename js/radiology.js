@@ -25,10 +25,34 @@ let meR = null;
 
   document.getElementById('reportForm').addEventListener('submit', saveReport);
   document.getElementById('cancelReportBtn').addEventListener('click', () => document.getElementById('reportOverlay').style.display = 'none');
+  document.getElementById('serviceForm').addEventListener('submit', addServiceToCatalogue);
 
   await loadPending();
   await loadCompleted();
+  await loadCatalogue();
 })();
+
+async function addServiceToCatalogue(e) {
+  e.preventDefault();
+  const payload = {
+    name: document.getElementById('sc_name').value.trim(),
+    modality: document.getElementById('sc_modality').value.trim(),
+    body_part: document.getElementById('sc_bodypart').value.trim(),
+    price: parseFloat(document.getElementById('sc_price').value) || 0
+  };
+  const { data, error } = await supabaseClient.from('imaging_services').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'RADIOLOGY', 'imaging_services', data.id, null, payload);
+  document.getElementById('serviceForm').reset();
+  await loadCatalogue();
+}
+
+async function loadCatalogue() {
+  const { data } = await supabaseClient.from('imaging_services').select('*').order('name');
+  const tbody = document.getElementById('catalogueTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="3" class="empty">No services in catalogue yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(s => `<tr><td>${s.name}</td><td>${s.modality || '—'}</td><td>${parseFloat(s.price || 0).toLocaleString()}</td></tr>`).join('');
+}
 
 async function fetchItems(statuses) {
   const { data } = await supabaseClient
