@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clinical Workspace — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .patient-header{
+    background:var(--hc-teal-900); color:#fff; border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:22px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+  }
+  .patient-header .name{font-size:1.15rem; font-weight:600;}
+  .patient-header .meta{font-family:var(--font-mono); font-size:.82rem; color:#BFDAD5;}
+  .allergy-flag{background:var(--hc-red); color:#fff; padding:3px 10px; border-radius:99px; font-size:.75rem; font-weight:600;}
+  .rx-row{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:center;}
+  @media (max-width:840px){.rx-row{grid-template-columns:1fr 1fr;}}
+  .diag-chip{display:inline-flex; align-items:center; gap:8px; background:var(--hc-teal-200); color:var(--hc-teal-900); padding:5px 10px; border-radius:99px; font-size:.85rem; margin:0 8px 8px 0;}
+  .diag-chip button{background:none; border:none; cursor:pointer; color:var(--hc-teal-900); font-weight:700;}
+  fieldset{border:none; padding:0; margin:0;}
+  fieldset:disabled{opacity:.65;}
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link active" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="patient-header" id="patientHeader">Loading patient…</div>
+
+    <div class="topbar">
+      <h1>Encounter <span class="mono" id="encounterNumber" style="font-size:1rem; color:var(--hc-ink-soft);"></span></h1>
+      <span class="pill active" id="encounterStatusPill"></span>
+    </div>
+
+    <!-- TRIAGE -->
+    <div class="panel">
+      <div class="panel-header"><h3>Triage</h3></div>
+      <div class="panel-body">
+        <fieldset id="triageFieldset">
+          <div class="grid-2">
+            <div class="field"><label>Temperature (°C)</label><input type="number" step="0.1" id="t_temp"></div>
+            <div class="field"><label>Pulse (bpm)</label><input type="number" id="t_pulse"></div>
+            <div class="field"><label>Respiratory rate</label><input type="number" id="t_rr"></div>
+            <div class="field"><label>SpO₂ (%)</label><input type="number" id="t_spo2"></div>
+            <div class="field"><label>BP systolic</label><input type="number" id="t_sys"></div>
+            <div class="field"><label>BP diastolic</label><input type="number" id="t_dia"></div>
+            <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" id="t_weight"></div>
+            <div class="field"><label>Height (cm)</label><input type="number" step="0.1" id="t_height"></div>
+            <div class="field"><label>Pain score (0–10)</label><input type="number" min="0" max="10" id="t_pain"></div>
+            <div class="field">
+              <label>Triage category</label>
+              <select id="t_category">
+                <option value="">— none —</option>
+                <option value="RED">RED — Emergency</option>
+                <option value="ORANGE">ORANGE — Very urgent</option>
+                <option value="YELLOW">YELLOW — Urgent</option>
+                <option value="GREEN">GREEN — Routine</option>
+              </select>
+            </div>
+          </div>
+          <div class="field"><label>Notes</label><input type="text" id="t_notes"></div>
+          <button class="btn btn-secondary" id="saveTriageBtn">Save triage</button>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- CONSULTATION -->
+    <div class="panel">
+      <div class="panel-header"><h3>Consultation</h3></div>
+      <div class="panel-body">
+        <fieldset id="noteFieldset">
+          <div class="field"><label>Chief complaint</label><input type="text" id="n_chief"></div>
+          <div class="field"><label>History of presenting illness</label><textarea id="n_history" rows="3" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Examination findings</label><textarea id="n_exam" rows="3" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Assessment</label><textarea id="n_assessment" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Plan</label><textarea id="n_plan" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" id="saveNoteBtn">Save draft</button>
+            <button class="btn btn-primary" id="signNoteBtn">Sign &amp; complete encounter</button>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- DIAGNOSES -->
+    <div class="panel">
+      <div class="panel-header"><h3>Diagnoses</h3></div>
+      <div class="panel-body">
+        <div id="diagList" style="margin-bottom:14px;"></div>
+        <fieldset id="diagFieldset">
+          <div class="grid-2">
+            <div class="field"><label>Diagnosis</label><input type="text" id="d_name"></div>
+            <div class="field">
+              <label>Type</label>
+              <select id="d_type"><option value="PRIMARY">Primary</option><option value="SECONDARY">Secondary</option></select>
+            </div>
+            <div class="field">
+              <label>Certainty</label>
+              <select id="d_certainty"><option value="CONFIRMED">Confirmed</option><option value="SUSPECTED">Suspected</option><option value="RULED_OUT">Ruled out</option></select>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="addDiagBtn">Add diagnosis</button>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- PRESCRIPTION -->
+    <div class="panel">
+      <div class="panel-header"><h3>Prescription</h3></div>
+      <div class="panel-body">
+        <div id="rxItemsList"></div>
+        <fieldset id="rxFieldset">
+          <div class="rx-row">
+            <input type="text" id="rx_name" placeholder="Medicine">
+            <input type="text" id="rx_dose" placeholder="Dose">
+            <input type="text" id="rx_route" placeholder="Route">
+            <input type="text" id="rx_freq" placeholder="Frequency">
+            <input type="text" id="rx_duration" placeholder="Duration">
+            <input type="text" id="rx_qty" placeholder="Quantity">
+            <button class="btn btn-secondary" id="addRxItemBtn" type="button">Add</button>
+          </div>
+          <input type="text" id="rx_instructions" placeholder="Instructions (optional)" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; margin-top:6px;">
+        </fieldset>
+        <button class="btn btn-primary" id="savePrescriptionBtn" style="margin-top:14px;">Send to pharmacy</button>
+      </div>
+    </div>
+
+    <!-- TIMELINE -->
+    <div class="panel">
+      <div class="panel-header"><h3>Patient timeline</h3></div>
+      <div class="panel-body">
+        <div id="timeline" class="empty">Loading…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/encounter.js"></script>
+</body>
+</html>
