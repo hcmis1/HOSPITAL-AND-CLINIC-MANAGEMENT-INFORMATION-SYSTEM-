@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Administration</div>
+      <a class="nav-link active" href="hr.html">HR</a>
+      <a class="nav-link" href="procurement.html">Procurement</a>
+      <a class="nav-link" href="quality.html">Quality</a>
+      <a class="nav-link" href="executive.html">Executive Dashboard</a>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>HR</h1></div>
+
+    <div class="panel" id="expiryPanel" style="display:none; border-color:var(--hc-amber);">
+      <div class="panel-header"><h3 style="color:var(--hc-amber);">⚠ Licences expiring or expired</h3></div>
+      <div class="panel-body"><div id="expiryList"></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="staff">Staff &amp; Licences</button>
+      <button class="tab-btn" data-tab="leave">Leave</button>
+      <button class="tab-btn" data-tab="attendance">Attendance</button>
+      <button class="tab-btn" data-tab="training">Training</button>
+    </div>
+
+    <!-- STAFF & LICENCES -->
+    <div class="tab-panel active" id="tab-staff">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Designation</th><th>Employment status</th><th></th></tr></thead>
+            <tbody id="staffTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="staffDetail" style="display:none;">
+        <div class="panel-header"><h3 id="staffDetailTitle">Staff</h3><button class="link-btn" onclick="closeStaffDetail()">Close</button></div>
+        <div class="panel-body">
+          <form id="profileForm">
+            <div class="grid-2">
+              <div class="field"><label>Designation</label><input type="text" id="p_designation"></div>
+              <div class="field"><label>Professional category</label><input type="text" id="p_category" placeholder="Doctor / Nurse / Lab Tech…"></div>
+              <div class="field"><label>Speciality</label><input type="text" id="p_speciality"></div>
+              <div class="field"><label>Registration number</label><input type="text" id="p_regnum"></div>
+              <div class="field"><label>Date joined</label><input type="date" id="p_joined"></div>
+              <div class="field">
+                <label>Employment status</label>
+                <select id="p_empstatus"><option value="ACTIVE">Active</option><option value="ON_LEAVE">On leave</option><option value="SUSPENDED">Suspended</option><option value="TERMINATED">Terminated</option></select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save profile</button>
+          </form>
+
+          <h4 style="font-size:.9rem; margin-top:24px;">Professional licences</h4>
+          <div id="licenceList" style="margin-bottom:12px;"></div>
+          <div class="grid-2">
+            <div class="field"><label>Professional body</label><input type="text" id="l_body"></div>
+            <div class="field"><label>Licence number</label><input type="text" id="l_number"></div>
+            <div class="field"><label>Issue date</label><input type="date" id="l_issue"></div>
+            <div class="field"><label>Expiry date</label><input type="date" id="l_expiry" required></div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="addLicenceBtn">Add licence</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEAVE -->
+    <div class="tab-panel" id="tab-leave">
+      <div class="panel">
+        <div class="panel-header"><h3>Request leave</h3></div>
+        <div class="panel-body">
+          <form id="leaveForm">
+            <div class="grid-2">
+              <div class="field"><label>Staff</label><select id="lv_user" required></select></div>
+              <div class="field">
+                <label>Type</label>
+                <select id="lv_type"><option value="ANNUAL">Annual</option><option value="SICK">Sick</option><option value="MATERNITY">Maternity</option><option value="PATERNITY">Paternity</option><option value="COMPASSIONATE">Compassionate</option><option value="UNPAID">Unpaid</option><option value="OTHER">Other</option></select>
+              </div>
+              <div class="field"><label>Start date</label><input type="date" id="lv_start" required></div>
+              <div class="field"><label>End date</label><input type="date" id="lv_end" required></div>
+            </div>
+            <div class="field"><label>Reason</label><input type="text" id="lv_reason"></div>
+            <button type="submit" class="btn btn-primary">Submit request</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Leave requests</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Staff</th><th>Type</th><th class="mono">Dates</th><th>Status</th><th></th></tr></thead>
+            <tbody id="leaveTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATTENDANCE -->
+    <div class="tab-panel" id="tab-attendance">
+      <div class="panel">
+        <div class="panel-header"><h3>Today's attendance</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Staff</th><th>Status</th></tr></thead>
+            <tbody id="attendanceTable"><tr><td colspan="2" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRAINING -->
+    <div class="tab-panel" id="tab-training">
+      <div class="panel">
+        <div class="panel-header"><h3>Add training record</h3></div>
+        <div class="panel-body">
+          <form id="trainingForm">
+            <div class="grid-2">
+              <div class="field"><label>Staff</label><select id="tr_user" required></select></div>
+              <div class="field"><label>Training name</label><input type="text" id="tr_name" required></div>
+              <div class="field"><label>Provider</label><input type="text" id="tr_provider"></div>
+              <div class="field"><label>Start date</label><input type="date" id="tr_start"></div>
+              <div class="field"><label>End date</label><input type="date" id="tr_end"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add record</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Training records</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Staff</th><th>Training</th><th>Provider</th><th class="mono">Dates</th></tr></thead>
+            <tbody id="trainingTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/hr.js"></script>
+</body>
+</html>
