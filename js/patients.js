@@ -96,6 +96,21 @@ function openProfile(id) {
       <a class="btn btn-primary" href="encounter.html?patient=${p.id}">Start / continue consultation</a>
     </div>
     <div style="margin-top:20px;">
+      <h4 style="font-size:.9rem; margin-bottom:8px;">Additional identifiers</h4>
+      <div id="identifiersList" class="empty">Loading…</div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <select id="id_type" style="padding:9px 10px; border:1px solid var(--hc-line); border-radius:6px;">
+          <option value="NATIONAL_ID">National ID</option>
+          <option value="PASSPORT">Passport</option>
+          <option value="INSURANCE_NUMBER">Insurance number</option>
+          <option value="REFUGEE_ID">Refugee ID</option>
+          <option value="OTHER">Other</option>
+        </select>
+        <input type="text" id="id_value" placeholder="Identifier value" style="flex:1; padding:9px 10px; border:1px solid var(--hc-line); border-radius:6px;">
+        <button class="btn btn-secondary" onclick="addIdentifier('${p.id}')">Add</button>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
       <h4 style="font-size:.9rem; margin-bottom:8px;">Recent encounters</h4>
       <div id="recentEncounters" class="empty">Loading…</div>
     </div>
@@ -103,6 +118,29 @@ function openProfile(id) {
   document.getElementById('profilePanel').style.display = 'block';
   document.getElementById('profilePanel').scrollIntoView({ behavior: 'smooth' });
   loadRecentEncounters(p.id);
+  loadIdentifiers(p.id);
+}
+
+async function loadIdentifiers(patientId) {
+  const { data } = await supabaseClient.from('patient_identifiers').select('*').eq('patient_id', patientId).order('created_at');
+  const box = document.getElementById('identifiersList');
+  if (!box) return;
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">None recorded.</span>'; return; }
+  box.innerHTML = data.map(i => `<span class="pill active" style="margin-right:6px;">${i.identifier_type}: ${i.identifier_value}</span>`).join('');
+}
+
+async function addIdentifier(patientId) {
+  const payload = {
+    patient_id: patientId,
+    identifier_type: document.getElementById('id_type').value,
+    identifier_value: document.getElementById('id_value').value.trim()
+  };
+  if (!payload.identifier_value) return;
+  const { data, error } = await supabaseClient.from('patient_identifiers').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'PATIENTS', 'patient_identifiers', data.id, null, payload);
+  document.getElementById('id_value').value = '';
+  await loadIdentifiers(patientId);
 }
 
 async function loadRecentEncounters(patientId) {
