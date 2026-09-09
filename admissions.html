@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admissions — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link active" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Admissions</h1></div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Admit patient</h3></div>
+      <div class="panel-body">
+        <form id="admitForm">
+          <div class="field">
+            <label>Patient</label>
+            <input type="text" id="ad_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+            <div id="ad_patientResults" style="margin-top:6px;"></div>
+            <input type="hidden" id="ad_patient_id">
+            <div id="ad_selectedPatient" style="margin-top:8px;"></div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Ward</label>
+              <select id="ad_ward" required></select>
+            </div>
+            <div class="field">
+              <label>Bed (available only)</label>
+              <select id="ad_bed" required></select>
+            </div>
+            <div class="field">
+              <label>Admitting doctor</label>
+              <select id="ad_doctor"><option value="">— none —</option></select>
+            </div>
+            <div class="field">
+              <label>Admission type</label>
+              <select id="ad_type"><option value="ELECTIVE">Elective</option><option value="EMERGENCY">Emergency</option></select>
+            </div>
+          </div>
+          <div class="field"><label>Admission diagnosis</label><input type="text" id="ad_diagnosis"></div>
+          <button type="submit" class="btn btn-primary">Admit</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Current inpatients</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Admission</th><th>Patient</th><th>Ward / Bed</th><th>Diagnosis</th><th class="mono">Admitted</th><th></th></tr></thead>
+          <tbody id="inpatientsTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Transfer overlay -->
+<div id="transferOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:380px; margin:16px;">
+    <div class="panel-header"><h3>Transfer bed</h3></div>
+    <div class="panel-body">
+      <form id="transferForm">
+        <input type="hidden" id="tr_admission_id">
+        <input type="hidden" id="tr_from_bed_id">
+        <div class="field"><label>New bed</label><select id="tr_to_bed" required></select></div>
+        <div class="field"><label>Reason</label><input type="text" id="tr_reason"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Transfer</button>
+          <button type="button" class="btn btn-secondary" id="cancelTransferBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Discharge overlay -->
+<div id="dischargeOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:380px; margin:16px;">
+    <div class="panel-header"><h3>Discharge</h3></div>
+    <div class="panel-body">
+      <form id="dischargeForm">
+        <input type="hidden" id="dc_admission_id">
+        <input type="hidden" id="dc_bed_id">
+        <div class="field">
+          <label>Disposition</label>
+          <select id="dc_disposition">
+            <option value="HOME">Home</option><option value="REFERRAL">Referral</option>
+            <option value="TRANSFER">Transfer</option><option value="DEATH">Death</option>
+            <option value="ABSCONDED">Absconded</option><option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Confirm discharge</button>
+          <button type="button" class="btn btn-secondary" id="cancelDischargeBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/admissions.js"></script>
+</body>
+</html>
