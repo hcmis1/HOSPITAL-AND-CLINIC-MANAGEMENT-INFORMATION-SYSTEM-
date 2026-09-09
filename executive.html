@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Dashboard — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Administration</div>
+      <a class="nav-link" href="hr.html">HR</a>
+      <a class="nav-link" href="procurement.html">Procurement</a>
+      <a class="nav-link" href="quality.html">Quality</a>
+      <a class="nav-link active" href="executive.html">Executive Dashboard</a>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Executive Dashboard</h1></div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Patients today</div><div class="value" id="k_patients">–</div></div>
+      <div class="stat-card"><div class="label">OPD visits today</div><div class="value" id="k_opd">–</div></div>
+      <div class="stat-card"><div class="label">Active admissions</div><div class="value" id="k_admissions">–</div></div>
+      <div class="stat-card"><div class="label">Bed occupancy</div><div class="value" id="k_occupancy">–</div></div>
+      <div class="stat-card"><div class="label">Revenue today</div><div class="value" id="k_revenue">–</div></div>
+      <div class="stat-card"><div class="label">Outstanding</div><div class="value" id="k_outstanding">–</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Patient registrations — last 14 days</h3></div>
+      <div class="panel-body"><canvas id="chartPatients" height="90"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Revenue collected — last 14 days</h3></div>
+      <div class="panel-body"><canvas id="chartRevenue" height="90"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Revenue by source</h3></div>
+      <div class="panel-body"><canvas id="chartSource" height="120"></canvas></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/executive.js"></script>
+</body>
+</html>
