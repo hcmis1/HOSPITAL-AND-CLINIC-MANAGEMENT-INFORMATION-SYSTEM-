@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICU — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link active" href="icu.html">ICU</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>ICU</h1></div>
+
+    <div class="panel" id="alertsPanel" style="display:none; border-color:var(--hc-red);">
+      <div class="panel-header"><h3 style="color:var(--hc-red);">⚠ Recent critical alerts</h3></div>
+      <div class="panel-body"><div id="alertsList"></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>ICU patients</h3></div>
+      <div class="panel-body" id="icuBody"><p class="empty">Loading…</p></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Record observation overlay -->
+<div id="obsOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:460px; margin:16px;">
+    <div class="panel-header"><h3 id="obsTitle">Record ICU observation</h3></div>
+    <div class="panel-body">
+      <form id="obsForm">
+        <input type="hidden" id="o_admission_id">
+        <input type="hidden" id="o_patient_id">
+        <div class="field"><label>Ventilator status</label><input type="text" id="o_vent"></div>
+        <div class="field"><label>Vital signs note</label><input type="text" id="o_vitals"></div>
+        <div class="field"><label>Fluid balance</label><input type="text" id="o_fluid"></div>
+        <div class="field"><label>Medication notes</label><input type="text" id="o_meds"></div>
+        <div class="field"><label>Daily review</label><input type="text" id="o_review"></div>
+        <label style="font-size:.9rem; display:block; margin-bottom:14px;"><input type="checkbox" id="o_critical"> Flag as critical</label>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" id="cancelObsBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/icu.js"></script>
+</body>
+</html>
