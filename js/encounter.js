@@ -46,7 +46,7 @@ let isReadOnly = false;
   document.getElementById('encounterStatusPill').className = 'pill ' + (isReadOnly ? 'inactive' : 'active');
 
   if (isReadOnly) {
-    ['triageFieldset', 'noteFieldset', 'diagFieldset', 'rxFieldset', 'labFieldset', 'imgFieldset'].forEach(id => document.getElementById(id).disabled = true);
+    ['triageFieldset', 'noteFieldset', 'diagFieldset', 'rxFieldset', 'labFieldset', 'imgFieldset', 'referralFieldset'].forEach(id => document.getElementById(id).disabled = true);
     document.getElementById('savePrescriptionBtn').disabled = true;
   }
 
@@ -65,6 +65,10 @@ let isReadOnly = false;
   document.getElementById('addRxItemBtn').addEventListener('click', addRxItem);
   document.getElementById('addLabTestBtn').addEventListener('click', addLabTest);
   document.getElementById('addImgServiceBtn').addEventListener('click', addImagingService);
+  document.getElementById('createReferralBtn').addEventListener('click', createReferral);
+
+  await loadCatalogueDatalists();
+  await loadReferrals();
   document.getElementById('savePrescriptionBtn').addEventListener('click', () => {
     if (!prescriptionId) { alert('Add at least one medicine first.'); return; }
     alert('Prescription sent to pharmacy.');
@@ -228,7 +232,7 @@ async function loadDiagnoses() {
   if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No diagnoses recorded yet.</span>'; return; }
   box.innerHTML = data.map(d => `
     <span class="diag-chip">
-      ${d.diagnosis_name} <span style="opacity:.7;">(${d.diagnosis_type.toLowerCase()}, ${d.certainty.toLowerCase()})</span>
+      ${d.diagnosis_name}${d.diagnosis_code ? ' (' + d.diagnosis_code + ')' : ''} <span style="opacity:.7;">(${d.diagnosis_type.toLowerCase()}, ${d.certainty.toLowerCase()})</span>
       ${!isReadOnly ? `<button onclick="deleteDiagnosis('${d.id}')">×</button>` : ''}
     </span>
   `).join('');
@@ -243,6 +247,7 @@ async function addDiagnosis() {
     diagnosis_name: name,
     diagnosis_type: document.getElementById('d_type').value,
     certainty: document.getElementById('d_certainty').value,
+    diagnosis_code: document.getElementById('d_code').value.trim() || null,
     recorded_by: meC.id
   };
   const { data, error } = await supabaseClient.from('diagnoses').insert(payload).select().single();
@@ -284,6 +289,16 @@ function renderRxItems(items, rxNumber) {
 async function addRxItem() {
   const name = document.getElementById('rx_name').value.trim();
   if (!name) return;
+
+  if (patient.allergies && patient.allergies.trim()) {
+    const allergyWords = patient.allergies.toLowerCase().split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    const nameLower = name.toLowerCase();
+    const hit = allergyWords.find(a => a && (nameLower.includes(a) || a.includes(nameLower)));
+    if (hit) {
+      const proceed = confirm(`⚠ Patient has a recorded allergy to "${hit}". Continue prescribing "${name}" anyway?`);
+      if (!proceed) return;
+    }
+  }
 
   if (!prescriptionId) {
     const { data, error } = await supabaseClient.from('prescriptions').insert({
@@ -432,6 +447,49 @@ async function addImagingService() {
   document.getElementById('img_service_name').value = '';
   document.getElementById('img_modality').value = '';
   await loadImagingOrders();
+}
+
+// ---------------- CATALOGUE DATALISTS ----------------
+async function loadCatalogueDatalists() {
+  const { data: tests } = await supabaseClient.from('lab_tests').select('test_name').eq('status', 'ACTIVE');
+  document.getElementById('labTestsDatalist').innerHTML = (tests || []).map(t => `<option value="${t.test_name}">`).join('');
+
+  const { data: services } = await supabaseClient.from('imaging_services').select('name').eq('status', 'ACTIVE');
+  document.getElementById('imgServicesDatalist').innerHTML = (services || []).map(s => `<option value="${s.name}">`).join('');
+}
+
+// ---------------- REFERRAL ----------------
+async function loadReferrals() {
+  const { data } = await supabaseClient.from('referrals').select('*').eq('encounter_id', encounter.id).order('created_at', { ascending: false });
+  const box = document.getElementById('referralList');
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No referrals for this encounter.</span>'; return; }
+  box.innerHTML = data.map(r => `
+    <div class="panel" style="margin-bottom:6px;"><div class="panel-body" style="padding:10px 14px;">
+      <strong class="mono">${r.referral_number}</strong> — ${r.receiving_facility} (${r.urgency})
+      <span class="pill ${r.status === 'COMPLETED' ? 'active' : 'inactive'}" style="margin-left:8px;">${r.status}</span>
+      ${r.reason ? '<br>' + r.reason : ''}
+    </div></div>
+  `).join('');
+}
+
+async function createReferral() {
+  const facility = document.getElementById('ref_facility').value.trim();
+  if (!facility) { alert('Enter the receiving facility.'); return; }
+  const payload = {
+    patient_id: patient.id, encounter_id: encounter.id, referring_provider_id: meC.id,
+    receiving_facility: facility, urgency: document.getElementById('ref_urgency').value,
+    reason: document.getElementById('ref_reason').value.trim(),
+    clinical_summary: document.getElementById('ref_summary').value.trim(),
+    created_by: meC.id
+  };
+  const { data, error } = await supabaseClient.from('referrals').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'CLINICAL', 'referrals', data.id, null, payload);
+
+  document.getElementById('ref_facility').value = '';
+  document.getElementById('ref_reason').value = '';
+  document.getElementById('ref_summary').value = '';
+  await loadReferrals();
 }
 
 // ---------------- TIMELINE ----------------
