@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laboratory — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Diagnostics</div>
+      <a class="nav-link active" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Laboratory</h1></div>
+
+    <div class="panel" id="criticalPanel" style="display:none; border-color:var(--hc-red);">
+      <div class="panel-header"><h3 style="color:var(--hc-red);">⚠ Critical results awaiting acknowledgement</h3></div>
+      <div class="panel-body"><div id="criticalList"></div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="pending">Pending</button>
+      <button class="tab-btn" data-tab="validation">Awaiting validation</button>
+      <button class="tab-btn" data-tab="completed">Completed</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-pending">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Test</th><th>Priority</th><th></th></tr></thead>
+            <tbody id="pendingTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-validation">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Test</th><th>Result</th><th>Entered by</th><th></th></tr></thead>
+            <tbody id="validationTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-completed">
+      <div class="panel">
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Test</th><th>Result</th><th>Flag</th></tr></thead>
+            <tbody id="completedTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Enter result overlay -->
+<div id="resultOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:420px; margin:16px;">
+    <div class="panel-header"><h3 id="resultTitle">Enter result</h3></div>
+    <div class="panel-body">
+      <form id="resultForm">
+        <input type="hidden" id="r_item_id">
+        <div class="field"><label>Result (text)</label><input type="text" id="r_value"></div>
+        <div class="field"><label>Numeric result</label><input type="number" step="any" id="r_numeric"></div>
+        <div class="field"><label>Unit</label><input type="text" id="r_unit"></div>
+        <div class="field"><label>Reference range</label><input type="text" id="r_ref"></div>
+        <div class="field">
+          <label>Flag</label>
+          <select id="r_flag"><option value="NORMAL">Normal</option><option value="LOW">Low</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option></select>
+        </div>
+        <div class="field"><label>Comment</label><input type="text" id="r_comment"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Save result</button>
+          <button type="button" class="btn btn-secondary" id="cancelResultBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/lab.js"></script>
+</body>
+</html>
