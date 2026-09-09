@@ -110,6 +110,16 @@ async function ensureEncounter(encounterId, appointmentId) {
   const { data, error } = await supabaseClient.from('encounters').insert(payload).select().single();
   if (error) { alert(error.message); throw error; }
   await logAudit('CREATE', 'CLINICAL', 'encounters', data.id, null, payload);
+
+  const consultService = await findCatalogueService('Consultation', 'CONSULTATION');
+  if (consultService) {
+    const inv = await findOrCreateInvoice(patient.id, data.id, meC.facility_id, meC.id);
+    if (inv) await addInvoiceItem(inv.id, {
+      description: consultService.service_name, quantity: 1, unit_price: consultService.standard_price,
+      source_module: 'CONSULTATION', source_record_id: data.id
+    });
+  }
+
   return data;
 }
 
@@ -348,6 +358,15 @@ async function addLabTest() {
   if (error) { alert(error.message); return; }
   await logAudit('CREATE', 'LABORATORY', 'lab_order_items', data.id, null, { test_name: name });
 
+  const service = await findCatalogueService(name, 'LABORATORY');
+  if (service) {
+    const inv = await findOrCreateInvoice(patient.id, encounter.id, meC.facility_id, meC.id);
+    if (inv) await addInvoiceItem(inv.id, {
+      description: service.service_name, quantity: 1, unit_price: service.standard_price,
+      source_module: 'LABORATORY', source_record_id: data.id
+    });
+  }
+
   document.getElementById('lab_test_name').value = '';
   await loadLabOrders();
 }
@@ -400,6 +419,15 @@ async function addImagingService() {
   }).select().single();
   if (error) { alert(error.message); return; }
   await logAudit('CREATE', 'RADIOLOGY', 'imaging_order_items', data.id, null, { service_name: name, modality });
+
+  const service = await findCatalogueService(name, 'RADIOLOGY');
+  if (service) {
+    const inv = await findOrCreateInvoice(patient.id, encounter.id, meC.facility_id, meC.id);
+    if (inv) await addInvoiceItem(inv.id, {
+      description: service.service_name, quantity: 1, unit_price: service.standard_price,
+      source_module: 'RADIOLOGY', source_record_id: data.id
+    });
+  }
 
   document.getElementById('img_service_name').value = '';
   document.getElementById('img_modality').value = '';
