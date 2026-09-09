@@ -4,6 +4,7 @@
 
 let meAd = null;
 let selectedAdPatient = null;
+let admissionsCache = [];
 
 (async function init() {
   meAd = await requireAuth();
@@ -129,6 +130,7 @@ async function loadInpatients() {
 
   const tbody = document.getElementById('inpatientsTable');
   if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No current inpatients.</td></tr>'; return; }
+  admissionsCache = data;
 
   tbody.innerHTML = data.map(a => `
     <tr>
@@ -193,6 +195,23 @@ async function doDischarge(e) {
   await supabaseClient.from('beds').update({ status: 'CLEANING' }).eq('id', bedId);
   await logAudit('UPDATE', 'HOSPITAL', 'admissions', admissionId, null, { status: 'DISCHARGED', discharge_disposition: disposition });
 
+  const admission = admissionsCache.find(a => a.id === admissionId);
+  if (admission) printDischargeForm(admission, disposition);
+
   document.getElementById('dischargeOverlay').style.display = 'none';
   await loadInpatients();
+}
+
+function printDischargeForm(admission, disposition) {
+  const body = `
+    <div class="row"><span class="label">Admission</span><span class="mono">${admission.admission_number}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${admission.patients.first_name} ${admission.patients.last_name} · ${admission.patients.mrn}</span></div>
+    <div class="row"><span class="label">Ward / Bed</span><span>${admission.beds ? admission.beds.rooms.wards.name + ' · ' + admission.beds.rooms.room_number + '-' + admission.beds.bed_number : '—'}</span></div>
+    <div class="row"><span class="label">Admission date</span><span class="mono">${new Date(admission.admission_date).toLocaleDateString('en-GB')}</span></div>
+    <div class="row"><span class="label">Discharge date</span><span class="mono">${new Date().toLocaleDateString('en-GB')}</span></div>
+    <div class="row"><span class="label">Admission diagnosis</span><span>${admission.admission_diagnosis || '—'}</span></div>
+    <div class="row"><span class="label">Discharge disposition</span><span>${disposition}</span></div>
+    <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Discharge summary</p>
+  `;
+  openPrintDocument('Discharge Summary — ' + admission.admission_number, meAd.facilities ? meAd.facilities.name : 'HCMIS', body);
 }
