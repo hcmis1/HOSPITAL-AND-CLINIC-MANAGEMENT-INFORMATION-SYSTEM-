@@ -146,8 +146,9 @@ async function loadQueue() {
         <td>${a.reason || '—'}</td>
         <td><span class="pill ${a.status === 'COMPLETED' ? 'active' : (a.status === 'CANCELLED' ? 'inactive' : 'active')}">${a.status}</span></td>
         <td>
-          ${flow ? `<button class="link-btn" onclick="advanceStatus('${a.id}','${flow.next}')">${flow.label}</button>` : ''}
-          ${canCancel ? `<button class="link-btn danger" onclick="advanceStatus('${a.id}','CANCELLED')">Cancel</button>` : ''}
+          <a class="link-btn" href="encounter.html?patient=${a.patient_id}&appointment=${a.id}">Open chart</a>
+          ${flow ? ` · <button class="link-btn" onclick="advanceStatus('${a.id}','${flow.next}')">${flow.label}</button>` : ''}
+          ${canCancel ? ` · <button class="link-btn danger" onclick="advanceStatus('${a.id}','CANCELLED')">Cancel</button>` : ''}
         </td>
       </tr>
     `;
