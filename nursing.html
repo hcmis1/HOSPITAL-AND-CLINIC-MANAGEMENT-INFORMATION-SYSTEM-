@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nursing — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div>
+      <a class="nav-link" href="billing.html">Billing</a>
+      <a class="nav-link active" href="insurance.html">Insurance &amp; Claims</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link active" href="nursing.html">Nursing</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Administration</div>
+      <a class="nav-link" href="hr.html">HR</a>
+      <a class="nav-link" href="procurement.html">Procurement</a>
+      <a class="nav-link" href="quality.html">Quality</a>
+      <a class="nav-link" href="executive.html">Executive Dashboard</a>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Nursing</h1></div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>My patients (current inpatients)</h3></div>
+      <div class="panel-body" id="patientListBody"><p class="empty">Loading…</p></div>
+    </div>
+
+    <div class="panel" id="chartPanel" style="display:none;">
+      <div class="panel-header"><h3 id="chartTitle">Nursing chart</h3><button class="link-btn" onclick="closeChart()">Close</button></div>
+      <div class="panel-body">
+
+        <h4 style="font-size:.9rem;">Vital signs</h4>
+        <div id="vitalsList" style="margin-bottom:10px;"></div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div class="field"><label>Temp (°C)</label><input type="number" step="0.1" id="v_temp"></div>
+          <div class="field"><label>Pulse</label><input type="number" id="v_pulse"></div>
+          <div class="field"><label>RR</label><input type="number" id="v_rr"></div>
+          <div class="field"><label>SpO₂</label><input type="number" id="v_spo2"></div>
+          <div class="field"><label>BP systolic</label><input type="number" id="v_sys"></div>
+          <div class="field"><label>BP diastolic</label><input type="number" id="v_dia"></div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addVitalsBtn" style="margin-bottom:24px;">Record vitals</button>
+
+        <h4 style="font-size:.9rem;">Medication administration</h4>
+        <div id="marList" style="margin-bottom:24px;"></div>
+
+        <h4 style="font-size:.9rem;">Fluid balance</h4>
+        <div id="fluidList" style="margin-bottom:10px;"></div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div class="field"><label>Oral intake (ml)</label><input type="number" id="f_oral"></div>
+          <div class="field"><label>IV intake (ml)</label><input type="number" id="f_iv"></div>
+          <div class="field"><label>Urine output (ml)</label><input type="number" id="f_urine"></div>
+          <div class="field"><label>Other output (ml)</label><input type="number" id="f_other"></div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addFluidBtn" style="margin-bottom:24px;">Record fluid balance</button>
+
+        <h4 style="font-size:.9rem;">Care plans</h4>
+        <div id="carePlanList" style="margin-bottom:10px;"></div>
+        <div class="field"><label>Problem</label><input type="text" id="cp_problem"></div>
+        <div class="grid-2">
+          <div class="field"><label>Goal</label><input type="text" id="cp_goal"></div>
+          <div class="field"><label>Intervention</label><input type="text" id="cp_intervention"></div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addCarePlanBtn" style="margin-bottom:24px;">Add care plan</button>
+
+        <h4 style="font-size:.9rem;">Nursing notes</h4>
+        <div id="notesList" style="margin-bottom:10px;"></div>
+        <div class="field"><label>Note</label><input type="text" id="nn_text"></div>
+        <button type="button" class="btn btn-secondary" id="addNoteBtn">Add note</button>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/nursing.js"></script>
+</body>
+</html>
