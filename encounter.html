@@ -42,6 +42,12 @@
       <a class="nav-link" href="appointments.html">Appointments</a>
     </div>
 
+    <div class="nav-group">
+      <div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+
     <div class="nav-group" id="adminNavGroup" style="display:none;">
       <div class="nav-label">Administration</div>
       <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
@@ -155,6 +161,49 @@
           <input type="text" id="rx_instructions" placeholder="Instructions (optional)" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; margin-top:6px;">
         </fieldset>
         <button class="btn btn-primary" id="savePrescriptionBtn" style="margin-top:14px;">Send to pharmacy</button>
+      </div>
+    </div>
+
+    <!-- LABORATORY -->
+    <div class="panel">
+      <div class="panel-header"><h3>Laboratory</h3></div>
+      <div class="panel-body">
+        <div id="labOrdersList" style="margin-bottom:14px;"></div>
+        <fieldset id="labFieldset">
+          <div class="grid-2">
+            <div class="field">
+              <label>Priority</label>
+              <select id="lab_priority"><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="STAT">STAT</option></select>
+            </div>
+            <div class="field"><label>Clinical information</label><input type="text" id="lab_clinical_info"></div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="lab_test_name" placeholder="Test name (e.g. Full Haemogram)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <button type="button" class="btn btn-secondary" id="addLabTestBtn">Add test</button>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+
+    <!-- RADIOLOGY -->
+    <div class="panel">
+      <div class="panel-header"><h3>Radiology</h3></div>
+      <div class="panel-body">
+        <div id="imgOrdersList" style="margin-bottom:14px;"></div>
+        <fieldset id="imgFieldset">
+          <div class="grid-2">
+            <div class="field">
+              <label>Priority</label>
+              <select id="img_priority"><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="STAT">STAT</option></select>
+            </div>
+            <div class="field"><label>Clinical indication</label><input type="text" id="img_indication"></div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="img_service_name" placeholder="Service (e.g. Chest X-ray)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <input type="text" id="img_modality" placeholder="Modality (X-ray / Ultrasound / CT…)" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <button type="button" class="btn btn-secondary" id="addImgServiceBtn">Add</button>
+          </div>
+        </fieldset>
       </div>
     </div>
 
