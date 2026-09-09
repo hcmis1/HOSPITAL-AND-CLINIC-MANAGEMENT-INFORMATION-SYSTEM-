@@ -24,6 +24,7 @@ let staffCache = [];
 
   document.getElementById('profileForm').addEventListener('submit', saveProfile);
   document.getElementById('addLicenceBtn').addEventListener('click', addLicence);
+  document.getElementById('uploadStaffDocBtn').addEventListener('click', uploadStaffDocument);
   document.getElementById('leaveForm').addEventListener('submit', submitLeave);
   document.getElementById('trainingForm').addEventListener('submit', submitTraining);
 
@@ -74,6 +75,7 @@ async function openStaffDetail(userId) {
   document.getElementById('p_empstatus').value = p ? p.employment_status : 'ACTIVE';
 
   await loadLicences(userId);
+  await loadStaffDocuments(userId);
   document.getElementById('staffDetail').style.display = 'block';
   document.getElementById('staffDetail').scrollIntoView({ behavior: 'smooth' });
 }
@@ -159,6 +161,48 @@ async function loadExpiryAlerts() {
   }).join('');
 }
 
+// ---------------- DOCUMENTS ----------------
+async function loadStaffDocuments(userId) {
+  const { data } = await supabaseClient.from('documents').select('*').eq('entity_type', 'STAFF').eq('entity_id', userId).eq('status', 'ACTIVE').order('uploaded_at', { ascending: false });
+  const box = document.getElementById('staffDocumentsList');
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No documents uploaded.</span>'; return; }
+  box.innerHTML = data.map(d => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+      <span>${d.document_type || d.file_name} — <span style="color:var(--hc-ink-soft); font-size:.85rem;">${new Date(d.uploaded_at).toLocaleDateString('en-GB')}</span></span>
+      <button class="link-btn" onclick="viewStaffDocument('${d.storage_path}')">View</button>
+    </div>
+  `).join('');
+}
+
+async function uploadStaffDocument() {
+  if (!currentStaffUserId) return;
+  const fileInput = document.getElementById('staffDocFile');
+  const file = fileInput.files[0];
+  if (!file) { alert('Choose a file first.'); return; }
+  const docType = document.getElementById('staffDocType').value.trim() || file.name;
+
+  const path = `staff/${currentStaffUserId}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabaseClient.storage.from('documents').upload(path, file);
+  if (uploadError) { alert(uploadError.message); return; }
+
+  const payload = {
+    entity_type: 'STAFF', entity_id: currentStaffUserId, document_type: docType,
+    file_name: file.name, storage_path: path, uploaded_by: meHR.id
+  };
+  const { data, error } = await supabaseClient.from('documents').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'DOCUMENTS', 'documents', data.id, null, payload);
+
+  document.getElementById('staffDocType').value = '';
+  fileInput.value = '';
+  await loadStaffDocuments(currentStaffUserId);
+}
+
+async function viewStaffDocument(path) {
+  const { data, error } = await supabaseClient.storage.from('documents').createSignedUrl(path, 3600);
+  if (error) { alert(error.message); return; }
+  window.open(data.signedUrl, '_blank');
+}
 // ---------------- LEAVE ----------------
 async function submitLeave(e) {
   e.preventDefault();
