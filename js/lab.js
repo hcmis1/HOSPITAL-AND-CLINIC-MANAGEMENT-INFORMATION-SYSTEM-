@@ -3,6 +3,7 @@
 // ==========================================================
 
 let meL = null;
+let wiCart = [];
 
 (async function init() {
   meL = await requireAuth();
@@ -26,12 +27,15 @@ let meL = null;
   document.getElementById('resultForm').addEventListener('submit', saveResult);
   document.getElementById('cancelResultBtn').addEventListener('click', () => document.getElementById('resultOverlay').style.display = 'none');
   document.getElementById('testForm').addEventListener('submit', addTestToCatalogue);
+  document.getElementById('addWiTestBtn').addEventListener('click', addWiTest);
+  document.getElementById('registerWiBtn').addEventListener('click', registerWalkIn);
 
   await loadCritical();
   await loadPending();
   await loadValidation();
   await loadCompleted();
   await loadCatalogue();
+  await loadWiTestDatalist();
 })();
 
 async function addTestToCatalogue(e) {
@@ -113,8 +117,30 @@ async function loadCompleted() {
       <td>${i.test_name}</td>
       <td>${r ? (r.result_value || r.numeric_result || '—') + ' ' + (r.unit || '') : '—'}</td>
       <td><span class="pill ${r && r.flag === 'CRITICAL' ? 'inactive' : 'active'}">${r ? r.flag || 'NORMAL' : '—'}</span></td>
+      <td><button class="link-btn" onclick='printLabResult(${JSON.stringify(i).replace(/'/g, "&apos;")})'>Print</button></td>
     </tr>`;
   }).join('');
+}
+
+function printLabResult(item) {
+  const r = item.lab_results && item.lab_results[0];
+  const body = `
+    <div class="row"><span class="label">Order</span><span class="mono">${item.lab_orders.order_number}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${item.lab_orders.patients.first_name} ${item.lab_orders.patients.last_name} · ${item.lab_orders.patients.mrn}</span></div>
+    <table>
+      <thead><tr><th>Test</th><th>Result</th><th>Unit</th><th>Reference range</th><th>Flag</th></tr></thead>
+      <tbody><tr>
+        <td>${item.test_name}</td>
+        <td>${r ? (r.result_value || r.numeric_result || '—') : '—'}</td>
+        <td>${r ? r.unit || '—' : '—'}</td>
+        <td>${r ? r.reference_range || '—' : '—'}</td>
+        <td>${r ? r.flag || 'NORMAL' : '—'}</td>
+      </tr></tbody>
+    </table>
+    ${r && r.comment ? `<p><strong>Comment</strong><br>${r.comment}</p>` : ''}
+    <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Validated result — laboratory report</p>
+  `;
+  openPrintDocument('Lab Result — ' + item.lab_orders.order_number, meL.facilities ? meL.facilities.name : 'HCMIS', body);
 }
 
 async function loadCritical() {
@@ -189,4 +215,113 @@ async function acknowledgeCritical(resultId) {
   await supabaseClient.from('lab_results').update({ acknowledged_by: meL.id, acknowledged_at: new Date().toISOString() }).eq('id', resultId);
   await logAudit('ACKNOWLEDGE', 'LABORATORY', 'lab_results', resultId, null, { acknowledged_by: meL.id });
   await loadCritical();
+}
+
+// ---------------- WALK-IN TEST ORDER ----------------
+async function loadWiTestDatalist() {
+  const { data } = await supabaseClient.from('lab_tests').select('test_name').eq('status', 'ACTIVE');
+  document.getElementById('labTestsDatalist2').innerHTML = (data || []).map(t => `<option value="${t.test_name}">`).join('');
+}
+
+async function addWiTest() {
+  const name = document.getElementById('wi_test_name').value.trim();
+  if (!name) return;
+  const { data: matches } = await supabaseClient.from('lab_tests').select('*').ilike('test_name', name);
+  const price = (matches && matches[0]) ? matches[0].price || 0 : 0;
+  wiCart.push({ name, price });
+  document.getElementById('wi_test_name').value = '';
+  renderWiCart();
+}
+
+function renderWiCart() {
+  const box = document.getElementById('wiCartList');
+  if (wiCart.length === 0) { box.innerHTML = '<span class="empty">No tests added yet.</span>'; document.getElementById('wiTotal').textContent = '0'; return; }
+  box.innerHTML = wiCart.map((t, idx) => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+      <span>${t.name}</span>
+      <span>${t.price.toLocaleString()} <button class="link-btn danger" onclick="removeWiTest(${idx})">×</button></span>
+    </div>
+  `).join('');
+  const total = wiCart.reduce((s, t) => s + t.price, 0);
+  document.getElementById('wiTotal').textContent = total.toLocaleString();
+}
+
+function removeWiTest(idx) {
+  wiCart.splice(idx, 1);
+  renderWiCart();
+}
+
+async function registerWalkIn() {
+  if (wiCart.length === 0) { alert('Add at least one test.'); return; }
+
+  const firstName = document.getElementById('wi_first').value.trim() || 'Walk-in';
+  const lastName = document.getElementById('wi_last').value.trim() || 'Customer';
+  const phone = document.getElementById('wi_phone').value.trim();
+  const sex = document.getElementById('wi_sex').value;
+
+  let patientId = null;
+  if (phone) {
+    const { data: existing } = await supabaseClient.from('patients').select('id').eq('phone', phone).limit(1).maybeSingle();
+    if (existing) patientId = existing.id;
+  }
+  if (!patientId) {
+    const { data: newPatient, error: patErr } = await supabaseClient.from('patients').insert({
+      first_name: firstName, last_name: lastName, sex, phone, facility_id: meL.facility_id || null, created_by: meL.id
+    }).select().single();
+    if (patErr) { alert(patErr.message); return; }
+    patientId = newPatient.id;
+  }
+
+  const { data: order, error: orderErr } = await supabaseClient.from('lab_orders').insert({
+    patient_id: patientId, ordered_by: meL.id
+  }).select().single();
+  if (orderErr) { alert(orderErr.message); return; }
+
+  for (const t of wiCart) {
+    await supabaseClient.from('lab_order_items').insert({ lab_order_id: order.id, test_name: t.name });
+  }
+
+  const { data: invoice, error: invErr } = await supabaseClient.from('invoices').insert({
+    patient_id: patientId, facility_id: meL.facility_id || null, created_by: meL.id
+  }).select().single();
+  if (invErr) { alert(invErr.message); return; }
+
+  for (const t of wiCart) {
+    await addInvoiceItem(invoice.id, { description: t.name, quantity: 1, unit_price: t.price, source_module: 'LABORATORY' });
+  }
+
+  const { data: freshInvoice } = await supabaseClient.from('invoices').select('*').eq('id', invoice.id).single();
+  const { data: payment, error: payErr } = await supabaseClient.from('payments').insert({
+    invoice_id: invoice.id, patient_id: patientId, amount: freshInvoice.total,
+    payment_method: document.getElementById('wi_method').value,
+    transaction_reference: document.getElementById('wi_ref').value.trim(), received_by: meL.id
+  }).select().single();
+  if (payErr) { alert(payErr.message); return; }
+
+  await supabaseClient.from('invoices').update({ amount_paid: freshInvoice.total }).eq('id', invoice.id);
+  await recalcInvoiceTotals(invoice.id);
+  await logAudit('CREATE', 'LABORATORY', 'lab_orders', order.id, null, { walk_in: true, patient_id: patientId });
+
+  printWiReceipt(firstName, lastName, order, payment);
+
+  wiCart = [];
+  renderWiCart();
+  document.getElementById('wi_ref').value = '';
+  await loadPending();
+}
+
+function printWiReceipt(firstName, lastName, order, payment) {
+  const body = `
+    <div class="row"><span class="label">Order</span><span class="mono">${order.order_number}</span></div>
+    <div class="row"><span class="label">Receipt</span><span class="mono">${payment.payment_number}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${new Date(payment.payment_date).toLocaleString('en-GB')}</span></div>
+    <div class="row"><span class="label">Customer</span><span>${firstName} ${lastName}</span></div>
+    <table>
+      <thead><tr><th>Test</th><th>Price</th></tr></thead>
+      <tbody>${wiCart.map(t => `<tr><td>${t.name}</td><td>${t.price.toLocaleString()}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
+    <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Present this slip when collecting results.</p>
+  `;
+  openPrintDocument('Lab Order ' + order.order_number, meL.facilities ? meL.facilities.name : 'HCMIS', body);
 }
