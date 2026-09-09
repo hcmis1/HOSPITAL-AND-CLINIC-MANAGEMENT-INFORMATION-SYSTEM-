@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insurance &amp; Claims — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div>
+      <a class="nav-link" href="billing.html">Billing</a>
+      <a class="nav-link active" href="insurance.html">Insurance &amp; Claims</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="nursing.html">Nursing</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Administration</div>
+      <a class="nav-link" href="hr.html">HR</a>
+      <a class="nav-link" href="procurement.html">Procurement</a>
+      <a class="nav-link" href="quality.html">Quality</a>
+      <a class="nav-link" href="executive.html">Executive Dashboard</a>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Insurance &amp; Claims</h1></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="claims">Claims</button>
+      <button class="tab-btn" data-tab="policies">Patient policies</button>
+      <button class="tab-btn" data-tab="providers">Providers</button>
+    </div>
+
+    <!-- CLAIMS -->
+    <div class="tab-panel active" id="tab-claims">
+      <div class="panel">
+        <div class="panel-header"><h3>New claim</h3></div>
+        <div class="panel-body">
+          <form id="claimForm">
+            <div class="field">
+              <label>Patient</label>
+              <input type="text" id="cl_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+              <div id="cl_patientResults" style="margin-top:6px;"></div>
+              <input type="hidden" id="cl_patient_id">
+              <div id="cl_selectedPatient" style="margin-top:8px;"></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label>Policy / Provider</label><select id="cl_policy" required></select></div>
+              <div class="field"><label>Invoice</label><select id="cl_invoice" required></select></div>
+            </div>
+            <div class="field"><label>Claim amount</label><input type="number" step="0.01" id="cl_amount" required></div>
+            <button type="submit" class="btn btn-primary">Create claim</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-body" id="claimsBody"><p class="empty">Loading…</p></div>
+      </div>
+    </div>
+
+    <!-- POLICIES -->
+    <div class="tab-panel" id="tab-policies">
+      <div class="panel">
+        <div class="panel-header"><h3>Link patient to insurance</h3></div>
+        <div class="panel-body">
+          <form id="policyForm">
+            <div class="field">
+              <label>Patient</label>
+              <input type="text" id="pl_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+              <div id="pl_patientResults" style="margin-top:6px;"></div>
+              <input type="hidden" id="pl_patient_id">
+              <div id="pl_selectedPatient" style="margin-top:8px;"></div>
+            </div>
+            <div class="grid-2">
+              <div class="field"><label>Provider</label><select id="pl_provider" required></select></div>
+              <div class="field"><label>Membership number</label><input type="text" id="pl_membership"></div>
+              <div class="field"><label>Scheme</label><input type="text" id="pl_scheme"></div>
+              <div class="field"><label>Relationship</label><input type="text" id="pl_relationship" value="SELF"></div>
+              <div class="field"><label>Start date</label><input type="date" id="pl_start"></div>
+              <div class="field"><label>Expiry date</label><input type="date" id="pl_expiry"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save policy</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Patient policies</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Patient</th><th>Provider</th><th>Membership #</th><th>Status</th></tr></thead>
+            <tbody id="policiesTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROVIDERS -->
+    <div class="tab-panel" id="tab-providers">
+      <div class="panel">
+        <div class="panel-header"><h3>Add insurance provider</h3></div>
+        <div class="panel-body">
+          <form id="providerForm">
+            <div class="grid-2">
+              <div class="field"><label>Name</label><input type="text" id="pv_name" required></div>
+              <div class="field"><label>Contact person</label><input type="text" id="pv_contact"></div>
+              <div class="field"><label>Phone</label><input type="text" id="pv_phone"></div>
+              <div class="field"><label>Email</label><input type="email" id="pv_email"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add provider</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Providers</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Name</th><th>Contact</th><th>Phone</th></tr></thead>
+            <tbody id="providersTable"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/billing-helpers.js"></script>
+<script src="js/insurance.js"></script>
+</body>
+</html>
