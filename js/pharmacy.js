@@ -275,6 +275,22 @@ async function doDispense(e) {
   await supabaseClient.from('prescription_items').update({ status: 'DISPENSED' }).eq('id', itemId);
   await logAudit('DISPENSE', 'PHARMACY', 'prescription_items', itemId, null, { medicine_id: medicineId, quantity: qtyNeeded });
 
+  // bill the dispensed items to the encounter's invoice
+  const { data: rx } = await supabaseClient.from('prescriptions').select('patient_id, encounter_id').eq('id', prescriptionId).single();
+  if (rx) {
+    const medicine = medicinesCache.find(m => m.id === medicineId);
+    const inv = await findOrCreateInvoice(rx.patient_id, rx.encounter_id, meP.facility_id, meP.id);
+    if (inv) {
+      for (const d of deductions) {
+        await addInvoiceItem(inv.id, {
+          description: medicine ? medicine.generic_name : 'Medicine',
+          quantity: d.take, unit_price: d.batch.selling_price || 0,
+          source_module: 'PHARMACY', source_record_id: itemId
+        });
+      }
+    }
+  }
+
   // if every item on this prescription is now dispensed/cancelled, close the prescription
   const { data: allItems } = await supabaseClient.from('prescription_items').select('status').eq('prescription_id', prescriptionId);
   if (allItems && allItems.every(i => i.status !== 'PENDING')) {
