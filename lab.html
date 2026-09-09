@@ -84,6 +84,7 @@
       <button class="tab-btn active" data-tab="pending">Pending</button>
       <button class="tab-btn" data-tab="validation">Awaiting validation</button>
       <button class="tab-btn" data-tab="completed">Completed</button>
+      <button class="tab-btn" data-tab="walkin">Walk-in Test</button>
       <button class="tab-btn" data-tab="catalogue">Test Catalogue</button>
     </div>
 
@@ -113,9 +114,52 @@
       <div class="panel">
         <div class="panel-body">
           <table>
-            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Test</th><th>Result</th><th>Flag</th></tr></thead>
-            <tbody id="completedTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+            <thead><tr><th class="mono">Order</th><th>Patient</th><th>Test</th><th>Result</th><th>Flag</th><th></th></tr></thead>
+            <tbody id="completedTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-walkin">
+      <div class="panel">
+        <div class="panel-header"><h3>Walk-in customer</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label>First name</label><input type="text" id="wi_first" value="Walk-in"></div>
+            <div class="field"><label>Last name</label><input type="text" id="wi_last" value="Customer"></div>
+            <div class="field"><label>Phone (optional)</label><input type="text" id="wi_phone"></div>
+            <div class="field"><label>Sex</label><select id="wi_sex"><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Tests</h3></div>
+        <div class="panel-body">
+          <div id="wiCartList" style="margin-bottom:14px;"></div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="wi_test_name" list="labTestsDatalist2" placeholder="Test name" style="flex:2; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <datalist id="labTestsDatalist2"></datalist>
+            <button type="button" class="btn btn-secondary" id="addWiTestBtn">Add test</button>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:16px; font-weight:600;">
+            <span>Total</span><span id="wiTotal">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Payment</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>Method</label>
+              <select id="wi_method"><option>CASH</option><option>MOBILE_MONEY</option><option>BANK</option><option>CARD</option><option>OTHER</option></select>
+            </div>
+            <div class="field"><label>Reference (optional)</label><input type="text" id="wi_ref"></div>
+          </div>
+          <button type="button" class="btn btn-primary" id="registerWiBtn">Register, bill &amp; print</button>
         </div>
       </div>
     </div>
@@ -179,6 +223,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/billing-helpers.js"></script>
+<script src="js/print-helpers.js"></script>
 <script src="js/lab.js"></script>
 </body>
 </html>
