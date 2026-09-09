@@ -28,6 +28,7 @@ let currentInvoiceId = null;
   document.getElementById('serviceForm').addEventListener('submit', addService);
   document.getElementById('addManualItemBtn').addEventListener('click', addManualItem);
   document.getElementById('recordPaymentBtn').addEventListener('click', recordPayment);
+  document.getElementById('applyDiscountTaxBtn').addEventListener('click', applyDiscountTax);
 
   let searchTimer;
   document.getElementById('invSearch').addEventListener('input', (e) => {
@@ -38,6 +39,7 @@ let currentInvoiceId = null;
   await loadStats();
   await loadInvoices();
   await loadServices();
+  await loadRefunds();
 })();
 
 async function loadStats() {
@@ -119,9 +121,13 @@ async function openInvoiceDetail(id) {
     document.getElementById('invItemsTable').innerHTML += `
       <tr><td colspan="5" style="border:none; padding-top:16px;"><strong>Payments</strong></td></tr>` +
       payments.map(p => `
-        <tr><td colspan="3" class="mono">${p.payment_number} · ${new Date(p.payment_date).toLocaleString('en-GB')}</td><td>${p.payment_method}</td><td>${parseFloat(p.amount).toLocaleString()}</td></tr>
+        <tr><td colspan="2" class="mono">${p.payment_number} · ${new Date(p.payment_date).toLocaleString('en-GB')}</td><td>${p.payment_method}</td><td>${parseFloat(p.amount).toLocaleString()}</td>
+        <td>${p.status === 'COMPLETED' ? `<button class="link-btn danger" onclick="requestRefund('${p.id}','${id}')">Request refund</button>` : p.status}</td></tr>
       `).join('');
   }
+
+  document.getElementById('inv_discount').value = inv.discount || 0;
+  document.getElementById('inv_tax').value = inv.tax || 0;
 
   document.getElementById('invFieldset').disabled = (inv.status === 'CANCELLED');
   document.getElementById('invoiceDetail').style.display = 'block';
@@ -179,6 +185,77 @@ async function recordPayment() {
   alert(`Payment ${data.payment_number} recorded.`);
 
   await openInvoiceDetail(currentInvoiceId);
+  await loadInvoices();
+  await loadStats();
+}
+
+async function applyDiscountTax() {
+  if (!currentInvoiceId) return;
+  const discount = parseFloat(document.getElementById('inv_discount').value) || 0;
+  const tax = parseFloat(document.getElementById('inv_tax').value) || 0;
+  await supabaseClient.from('invoices').update({ discount, tax }).eq('id', currentInvoiceId);
+  await logAudit('UPDATE', 'BILLING', 'invoices', currentInvoiceId, null, { discount, tax });
+  await recalcInvoiceTotals(currentInvoiceId);
+  await openInvoiceDetail(currentInvoiceId);
+  await loadInvoices();
+  await loadStats();
+}
+
+// ---------------- REFUNDS ----------------
+async function requestRefund(paymentId, invoiceId) {
+  const amountStr = prompt('Refund amount:');
+  if (amountStr === null) return;
+  const amount = parseFloat(amountStr);
+  if (isNaN(amount) || amount <= 0) { alert('Enter a valid amount.'); return; }
+  const reason = prompt('Reason for refund:') || '';
+
+  const payload = { payment_id: paymentId, invoice_id: invoiceId, amount, reason, requested_by: meB.id };
+  const { data, error } = await supabaseClient.from('refund_requests').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'BILLING', 'refund_requests', data.id, null, payload);
+  alert('Refund request submitted for approval.');
+  await loadRefunds();
+}
+
+async function loadRefunds() {
+  const { data } = await supabaseClient.from('refund_requests').select('*, invoices(invoice_number, patients(first_name, last_name, mrn))').order('created_at', { ascending: false }).limit(50);
+  const box = document.getElementById('refundsBody');
+  if (!box) return;
+  if (!data || data.length === 0) { box.innerHTML = '<p class="empty">No refund requests.</p>'; return; }
+
+  box.innerHTML = data.map(r => `
+    <div class="panel" style="margin-bottom:10px;">
+      <div class="panel-body">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div>
+            <strong>${r.invoices ? r.invoices.invoice_number : '—'}</strong> —
+            ${r.invoices && r.invoices.patients ? r.invoices.patients.first_name + ' ' + r.invoices.patients.last_name : ''}
+            <br><span style="font-size:.9rem; color:var(--hc-ink-soft);">${parseFloat(r.amount).toLocaleString()} ${r.reason ? '· ' + r.reason : ''}</span>
+          </div>
+          <span class="pill ${r.status === 'APPROVED' ? 'active' : (r.status === 'REJECTED' ? 'inactive' : 'inactive')}">${r.status}</span>
+        </div>
+        ${r.status === 'PENDING' ? `
+          <div style="margin-top:8px;">
+            <button class="link-btn" onclick="decideRefund('${r.id}','APPROVED','${r.invoice_id}','${r.amount}')">Approve</button> ·
+            <button class="link-btn danger" onclick="decideRefund('${r.id}','REJECTED','${r.invoice_id}','${r.amount}')">Reject</button>
+          </div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function decideRefund(id, status, invoiceId, amount) {
+  await supabaseClient.from('refund_requests').update({ status, approved_by: meB.id, decided_at: new Date().toISOString() }).eq('id', id);
+  await logAudit('UPDATE', 'BILLING', 'refund_requests', id, null, { status });
+
+  if (status === 'APPROVED') {
+    const { data: inv } = await supabaseClient.from('invoices').select('amount_paid').eq('id', invoiceId).single();
+    const newPaid = Math.max(0, parseFloat(inv.amount_paid || 0) - parseFloat(amount));
+    await supabaseClient.from('invoices').update({ amount_paid: newPaid }).eq('id', invoiceId);
+    await recalcInvoiceTotals(invoiceId);
+  }
+
+  await loadRefunds();
   await loadInvoices();
   await loadStats();
 }
