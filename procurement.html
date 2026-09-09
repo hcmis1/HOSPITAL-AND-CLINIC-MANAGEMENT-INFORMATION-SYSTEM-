@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Administration</div>
+      <a class="nav-link" href="hr.html">HR</a>
+      <a class="nav-link active" href="procurement.html">Procurement</a>
+      <a class="nav-link" href="quality.html">Quality</a>
+      <a class="nav-link" href="executive.html">Executive Dashboard</a>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Procurement</h1></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="requisitions">Requisitions</button>
+      <button class="tab-btn" data-tab="orders">Purchase orders</button>
+      <button class="tab-btn" data-tab="suppliers">Suppliers</button>
+    </div>
+
+    <!-- REQUISITIONS -->
+    <div class="tab-panel active" id="tab-requisitions">
+      <div class="panel">
+        <div class="panel-header"><h3>New requisition</h3></div>
+        <div class="panel-body">
+          <form id="reqForm">
+            <div class="grid-2">
+              <div class="field"><label>Department</label><select id="rq_department"><option value="">— none —</option></select></div>
+              <div class="field"><label>Quantity</label><input type="number" id="rq_qty" value="1" required></div>
+            </div>
+            <div class="field"><label>Item description</label><input type="text" id="rq_item" required></div>
+            <div class="field"><label>Justification</label><input type="text" id="rq_justification"></div>
+            <button type="submit" class="btn btn-primary">Submit requisition</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Requisitions</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">Number</th><th>Item</th><th>Qty</th><th>Status</th><th></th></tr></thead>
+            <tbody id="reqTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PURCHASE ORDERS -->
+    <div class="tab-panel" id="tab-orders">
+      <div class="panel">
+        <div class="panel-header"><h3>Create purchase order</h3></div>
+        <div class="panel-body">
+          <form id="poForm">
+            <div class="grid-2">
+              <div class="field"><label>Supplier</label><select id="po_supplier" required></select></div>
+              <div class="field"><label>From requisition (optional)</label><select id="po_requisition"><option value="">— none —</option></select></div>
+              <div class="field"><label>Expected date</label><input type="date" id="po_expected"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create order</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel" id="poDetail" style="display:none;">
+        <div class="panel-header"><h3 id="poTitle">Purchase order</h3><button class="link-btn" onclick="closePoDetail()">Close</button></div>
+        <div class="panel-body">
+          <div id="poItemsList" style="margin-bottom:12px;"></div>
+          <fieldset id="poItemFieldset">
+            <div style="display:flex; gap:8px; margin-bottom:14px;">
+              <input type="text" id="poi_desc" placeholder="Description" style="flex:2; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <input type="number" id="poi_qty" placeholder="Qty" value="1" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <input type="number" id="poi_cost" placeholder="Unit cost" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+              <button type="button" class="btn btn-secondary" id="addPoItemBtn">Add item</button>
+            </div>
+          </fieldset>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" id="markSentBtn">Mark sent to supplier</button>
+            <button class="btn btn-primary" id="receiveGoodsBtn">Record goods received</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Purchase orders</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th class="mono">PO</th><th>Supplier</th><th class="mono">Order date</th><th>Status</th><th></th></tr></thead>
+            <tbody id="poTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPLIERS -->
+    <div class="tab-panel" id="tab-suppliers">
+      <div class="panel">
+        <div class="panel-header"><h3>Add supplier</h3></div>
+        <div class="panel-body">
+          <form id="supplierForm">
+            <div class="grid-2">
+              <div class="field"><label>Name</label><input type="text" id="sp_name" required></div>
+              <div class="field"><label>Contact person</label><input type="text" id="sp_contact"></div>
+              <div class="field"><label>Phone</label><input type="text" id="sp_phone"></div>
+              <div class="field"><label>Email</label><input type="email" id="sp_email"></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Add supplier</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Suppliers</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Name</th><th>Contact</th><th>Phone</th><th>Email</th></tr></thead>
+            <tbody id="supplierTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/procurement.js"></script>
+</body>
+</html>
