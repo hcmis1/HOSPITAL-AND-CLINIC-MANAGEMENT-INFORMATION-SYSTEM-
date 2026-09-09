@@ -6,6 +6,8 @@ let meC = null;
 let patient = null;
 let encounter = null;
 let prescriptionId = null;
+let labOrderId = null;
+let imagingOrderId = null;
 let isReadOnly = false;
 
 (async function init() {
@@ -44,7 +46,7 @@ let isReadOnly = false;
   document.getElementById('encounterStatusPill').className = 'pill ' + (isReadOnly ? 'inactive' : 'active');
 
   if (isReadOnly) {
-    ['triageFieldset', 'noteFieldset', 'diagFieldset', 'rxFieldset'].forEach(id => document.getElementById(id).disabled = true);
+    ['triageFieldset', 'noteFieldset', 'diagFieldset', 'rxFieldset', 'labFieldset', 'imgFieldset'].forEach(id => document.getElementById(id).disabled = true);
     document.getElementById('savePrescriptionBtn').disabled = true;
   }
 
@@ -52,6 +54,8 @@ let isReadOnly = false;
   await loadNote();
   await loadDiagnoses();
   await loadPrescription();
+  await loadLabOrders();
+  await loadImagingOrders();
   await loadTimeline();
 
   document.getElementById('saveTriageBtn').addEventListener('click', saveTriage);
@@ -59,6 +63,8 @@ let isReadOnly = false;
   document.getElementById('signNoteBtn').addEventListener('click', () => saveNote(true));
   document.getElementById('addDiagBtn').addEventListener('click', addDiagnosis);
   document.getElementById('addRxItemBtn').addEventListener('click', addRxItem);
+  document.getElementById('addLabTestBtn').addEventListener('click', addLabTest);
+  document.getElementById('addImgServiceBtn').addEventListener('click', addImagingService);
   document.getElementById('savePrescriptionBtn').addEventListener('click', () => {
     if (!prescriptionId) { alert('Add at least one medicine first.'); return; }
     alert('Prescription sent to pharmacy.');
@@ -294,6 +300,110 @@ async function addRxItem() {
 
   ['rx_name', 'rx_dose', 'rx_route', 'rx_freq', 'rx_duration', 'rx_qty', 'rx_instructions'].forEach(id => document.getElementById(id).value = '');
   await loadPrescription();
+}
+
+// ---------------- LABORATORY ----------------
+
+async function loadLabOrders() {
+  const { data: orders } = await supabaseClient.from('lab_orders').select('*').eq('encounter_id', encounter.id).order('ordered_at', { ascending: false });
+  const box = document.getElementById('labOrdersList');
+  if (!orders || orders.length === 0) { box.innerHTML = '<span class="empty">No laboratory tests ordered yet.</span>'; return; }
+
+  labOrderId = orders[0].id;
+  let html = '';
+  for (const o of orders) {
+    const { data: items } = await supabaseClient.from('lab_order_items').select('*, lab_results(*)').eq('lab_order_id', o.id);
+    html += `<p class="mono" style="color:var(--hc-ink-soft); font-size:.85rem;">${o.order_number} · ${o.priority}</p>`;
+    (items || []).forEach(i => {
+      const r = i.lab_results && i.lab_results[0];
+      html += `
+        <div class="panel" style="margin-bottom:6px;">
+          <div class="panel-body" style="padding:10px 14px;">
+            <strong>${i.test_name}</strong> — <span class="pill ${i.status === 'VALIDATED' ? 'active' : 'inactive'}">${i.status}</span>
+            ${r ? `<br>Result: ${r.result_value || r.numeric_result || '—'} ${r.unit || ''} ${r.flag ? '(' + r.flag + ')' : ''}` : ''}
+          </div>
+        </div>`;
+    });
+  }
+  box.innerHTML = html;
+}
+
+async function addLabTest() {
+  const name = document.getElementById('lab_test_name').value.trim();
+  if (!name) return;
+
+  if (!labOrderId) {
+    const payload = {
+      patient_id: patient.id, encounter_id: encounter.id, ordered_by: meC.id,
+      priority: document.getElementById('lab_priority').value,
+      clinical_information: document.getElementById('lab_clinical_info').value.trim()
+    };
+    const { data, error } = await supabaseClient.from('lab_orders').insert(payload).select().single();
+    if (error) { alert(error.message); return; }
+    labOrderId = data.id;
+    await logAudit('CREATE', 'LABORATORY', 'lab_orders', data.id, null, payload);
+  }
+
+  const { data, error } = await supabaseClient.from('lab_order_items').insert({ lab_order_id: labOrderId, test_name: name }).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'LABORATORY', 'lab_order_items', data.id, null, { test_name: name });
+
+  document.getElementById('lab_test_name').value = '';
+  await loadLabOrders();
+}
+
+// ---------------- RADIOLOGY ----------------
+
+async function loadImagingOrders() {
+  const { data: orders } = await supabaseClient.from('imaging_orders').select('*').eq('encounter_id', encounter.id).order('ordered_at', { ascending: false });
+  const box = document.getElementById('imgOrdersList');
+  if (!orders || orders.length === 0) { box.innerHTML = '<span class="empty">No imaging ordered yet.</span>'; return; }
+
+  imagingOrderId = orders[0].id;
+  let html = '';
+  for (const o of orders) {
+    const { data: items } = await supabaseClient.from('imaging_order_items').select('*, imaging_reports(*)').eq('imaging_order_id', o.id);
+    html += `<p class="mono" style="color:var(--hc-ink-soft); font-size:.85rem;">${o.order_number} · ${o.priority}</p>`;
+    (items || []).forEach(i => {
+      const r = i.imaging_reports && i.imaging_reports[0];
+      html += `
+        <div class="panel" style="margin-bottom:6px;">
+          <div class="panel-body" style="padding:10px 14px;">
+            <strong>${i.service_name}</strong> ${i.modality ? '(' + i.modality + ')' : ''} — <span class="pill ${i.status === 'COMPLETED' ? 'active' : 'inactive'}">${i.status}</span>
+            ${r && r.reported_at ? `<br><strong>Findings:</strong> ${r.findings || '—'}<br><strong>Impression:</strong> ${r.impression || '—'}` : ''}
+          </div>
+        </div>`;
+    });
+  }
+  box.innerHTML = html;
+}
+
+async function addImagingService() {
+  const name = document.getElementById('img_service_name').value.trim();
+  if (!name) return;
+
+  if (!imagingOrderId) {
+    const payload = {
+      patient_id: patient.id, encounter_id: encounter.id, requested_by: meC.id,
+      priority: document.getElementById('img_priority').value,
+      clinical_indication: document.getElementById('img_indication').value.trim()
+    };
+    const { data, error } = await supabaseClient.from('imaging_orders').insert(payload).select().single();
+    if (error) { alert(error.message); return; }
+    imagingOrderId = data.id;
+    await logAudit('CREATE', 'RADIOLOGY', 'imaging_orders', data.id, null, payload);
+  }
+
+  const modality = document.getElementById('img_modality').value.trim();
+  const { data, error } = await supabaseClient.from('imaging_order_items').insert({
+    imaging_order_id: imagingOrderId, service_name: name, modality
+  }).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'RADIOLOGY', 'imaging_order_items', data.id, null, { service_name: name, modality });
+
+  document.getElementById('img_service_name').value = '';
+  document.getElementById('img_modality').value = '';
+  await loadImagingOrders();
 }
 
 // ---------------- TIMELINE ----------------
