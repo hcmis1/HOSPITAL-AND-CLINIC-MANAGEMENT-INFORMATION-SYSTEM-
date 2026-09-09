@@ -93,11 +93,30 @@ function openProfile(id) {
     <div style="margin-top:18px; display:flex; gap:10px;">
       <button class="btn btn-secondary" onclick="editPatient('${p.id}')">Edit details</button>
       <a class="btn btn-secondary" href="appointments.html?patient=${p.id}">Book appointment</a>
+      <a class="btn btn-primary" href="encounter.html?patient=${p.id}">Start / continue consultation</a>
     </div>
-    <p class="empty" style="margin-top:18px;">Clinical, laboratory, pharmacy and billing history will appear here as those modules are built.</p>
+    <div style="margin-top:20px;">
+      <h4 style="font-size:.9rem; margin-bottom:8px;">Recent encounters</h4>
+      <div id="recentEncounters" class="empty">Loading…</div>
+    </div>
   `;
   document.getElementById('profilePanel').style.display = 'block';
   document.getElementById('profilePanel').scrollIntoView({ behavior: 'smooth' });
+  loadRecentEncounters(p.id);
+}
+
+async function loadRecentEncounters(patientId) {
+  const { data } = await supabaseClient.from('encounters').select('*')
+    .eq('patient_id', patientId).order('visit_date', { ascending: false }).limit(5);
+  const box = document.getElementById('recentEncounters');
+  if (!box) return;
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No encounters recorded yet.</span>'; return; }
+  box.innerHTML = data.map(e => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+      <span>${e.visit_date} · ${e.encounter_type} · ${e.chief_complaint || 'No chief complaint recorded'}</span>
+      <a class="link-btn" href="encounter.html?patient=${patientId}&encounter=${e.id}">Open</a>
+    </div>
+  `).join('');
 }
 
 function closeProfile() {
