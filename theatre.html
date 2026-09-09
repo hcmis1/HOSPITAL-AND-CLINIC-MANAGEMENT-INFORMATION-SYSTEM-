@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Theatre — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link" href="maternity.html">Maternity</a>
+      <a class="nav-link active" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Theatre</h1></div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Book case</h3></div>
+      <div class="panel-body">
+        <form id="bookForm">
+          <div class="field">
+            <label>Patient</label>
+            <input type="text" id="th_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+            <div id="th_patientResults" style="margin-top:6px;"></div>
+            <input type="hidden" id="th_patient_id">
+            <div id="th_selectedPatient" style="margin-top:8px;"></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Procedure</label><input type="text" id="th_procedure" required></div>
+            <div class="field"><label>Indication</label><input type="text" id="th_indication"></div>
+            <div class="field"><label>Surgeon</label><select id="th_surgeon"><option value="">— none —</option></select></div>
+            <div class="field"><label>Assistant</label><select id="th_assistant"><option value="">— none —</option></select></div>
+            <div class="field"><label>Anaesthetist</label><select id="th_anaesthetist"><option value="">— none —</option></select></div>
+            <div class="field"><label>Scheduled time</label><input type="datetime-local" id="th_time"></div>
+          </div>
+          <button type="submit" class="btn btn-primary">Book case</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Cases</h3></div>
+      <div class="panel-body" id="casesBody"><p class="empty">Loading…</p></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Complete case overlay -->
+<div id="completeOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
+  <div class="panel" style="width:100%; max-width:420px; margin:16px;">
+    <div class="panel-header"><h3>Complete case</h3></div>
+    <div class="panel-body">
+      <form id="completeForm">
+        <input type="hidden" id="cc_case_id">
+        <div class="field"><label>Findings</label><input type="text" id="cc_findings"></div>
+        <div class="field"><label>Complications</label><input type="text" id="cc_complications"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-primary">Mark completed</button>
+          <button type="button" class="btn btn-secondary" id="cancelCompleteBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/theatre.js"></script>
+</body>
+</html>
