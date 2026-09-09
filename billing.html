@@ -83,6 +83,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="invoices">Invoices</button>
+      <button class="tab-btn" data-tab="refunds">Refunds</button>
       <button class="tab-btn" data-tab="catalogue">Service catalogue</button>
     </div>
 
@@ -126,6 +127,12 @@
               <button type="button" class="btn btn-secondary" id="addManualItemBtn">Add item</button>
             </div>
 
+            <div class="grid-2" style="margin-bottom:8px;">
+              <div class="field"><label>Discount</label><input type="number" step="0.01" id="inv_discount"></div>
+              <div class="field"><label>Tax</label><input type="number" step="0.01" id="inv_tax"></div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="applyDiscountTaxBtn" style="margin-bottom:24px;">Apply discount / tax</button>
+
             <h4 style="font-size:.9rem;">Record payment</h4>
             <div class="grid-2">
               <div class="field"><label>Amount</label><input type="number" step="0.01" id="pay_amount"></div>
@@ -138,6 +145,13 @@
             <button type="button" class="btn btn-primary" id="recordPaymentBtn">Record payment</button>
           </fieldset>
         </div>
+      </div>
+    </div>
+
+    <!-- REFUNDS -->
+    <div class="tab-panel" id="tab-refunds">
+      <div class="panel">
+        <div class="panel-body" id="refundsBody"><p class="empty">Loading…</p></div>
       </div>
     </div>
 
