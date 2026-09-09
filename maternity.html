@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maternity — HCMIS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar">
+    <div class="brand">HCMIS</div>
+    <div class="facility-name" id="facilityName">Loading…</div>
+
+    <div class="nav-group"><div class="nav-label">Overview</div><a class="nav-link" href="dashboard.html">Dashboard</a></div>
+    <div class="nav-group"><div class="nav-label">Patient Services</div>
+      <a class="nav-link" href="patients.html">Patients</a>
+      <a class="nav-link" href="appointments.html">Appointments</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Diagnostics</div>
+      <a class="nav-link" href="lab.html">Laboratory</a>
+      <a class="nav-link" href="radiology.html">Radiology</a>
+    </div>
+    <div class="nav-group"><div class="nav-label">Pharmacy</div><a class="nav-link" href="pharmacy.html">Pharmacy</a></div>
+    <div class="nav-group"><div class="nav-label">Finance</div><a class="nav-link" href="billing.html">Billing</a></div>
+    <div class="nav-group"><div class="nav-label">Hospital</div>
+      <a class="nav-link" href="wards.html">Wards &amp; Beds</a>
+      <a class="nav-link" href="admissions.html">Admissions</a>
+      <a class="nav-link active" href="maternity.html">Maternity</a>
+      <a class="nav-link" href="theatre.html">Theatre</a>
+      <a class="nav-link" href="icu.html">ICU</a>
+    </div>
+
+    <div class="nav-group" id="adminNavGroup" style="display:none;">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link" href="admin.html">Facilities &amp; Departments</a>
+      <a class="nav-link" href="admin.html#users">Users</a>
+      <a class="nav-link" href="admin.html#audit">Audit Logs</a>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="who" id="whoName">—</div>
+      <div class="role" id="whoRole">—</div>
+      <button class="link-btn" style="color:#DCEEEA;" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar"><h1>Maternity</h1></div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>New antenatal episode</h3></div>
+      <div class="panel-body">
+        <form id="episodeForm">
+          <div class="field">
+            <label>Mother</label>
+            <input type="text" id="mo_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+            <div id="mo_results" style="margin-top:6px;"></div>
+            <input type="hidden" id="mo_patient_id">
+            <div id="mo_selected" style="margin-top:8px;"></div>
+          </div>
+          <div class="grid-2">
+            <div class="field"><label>Gravida</label><input type="number" id="e_gravida"></div>
+            <div class="field"><label>Para</label><input type="number" id="e_para"></div>
+            <div class="field"><label>Abortions</label><input type="number" id="e_abortions"></div>
+            <div class="field"><label>Living children</label><input type="number" id="e_living"></div>
+            <div class="field"><label>LMP</label><input type="date" id="e_lmp"></div>
+            <div class="field"><label>EDD</label><input type="date" id="e_edd"></div>
+          </div>
+          <button type="submit" class="btn btn-primary">Start episode</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Active episodes</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th>Mother</th><th>Status</th><th class="mono">EDD</th><th></th></tr></thead>
+          <tbody id="episodesTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="episodeDetail" style="display:none;">
+      <div class="panel-header">
+        <h3 id="episodeTitle">Episode</h3>
+        <button class="link-btn" onclick="closeEpisode()">Close</button>
+      </div>
+      <div class="panel-body">
+        <div id="episodeMeta" style="margin-bottom:16px;"></div>
+
+        <h4 style="font-size:.9rem;">Labour observations</h4>
+        <div id="labourList" style="margin-bottom:12px;"></div>
+        <fieldset id="labourFieldset" style="margin-bottom:24px;">
+          <div class="grid-2">
+            <div class="field"><label>Cervical dilation (cm)</label><input type="number" step="0.5" id="l_dilation"></div>
+            <div class="field"><label>Contractions</label><input type="text" id="l_contractions"></div>
+            <div class="field"><label>Fetal heart rate</label><input type="number" id="l_fhr"></div>
+            <div class="field"><label>Maternal BP</label><input type="text" id="l_bp" placeholder="e.g. 120/80"></div>
+            <div class="field"><label>Maternal pulse</label><input type="number" id="l_pulse"></div>
+            <div class="field"><label>Maternal temperature</label><input type="number" step="0.1" id="l_temp"></div>
+          </div>
+          <div class="field"><label>Membrane status</label><input type="text" id="l_membrane"></div>
+          <button type="button" class="btn btn-secondary" id="addLabourBtn">Record observation</button>
+        </fieldset>
+
+        <h4 style="font-size:.9rem;">Delivery</h4>
+        <div id="deliveryInfo" style="margin-bottom:12px;"></div>
+        <fieldset id="deliveryFieldset" style="margin-bottom:24px;">
+          <div class="grid-2">
+            <div class="field">
+              <label>Mode of delivery</label>
+              <select id="d_mode"><option value="SVD">SVD</option><option value="ASSISTED">Assisted</option><option value="CAESAREAN">Caesarean</option><option value="OTHER">Other</option></select>
+            </div>
+            <div class="field"><label>Place of delivery</label><input type="text" id="d_place"></div>
+          </div>
+          <div class="field"><label>Complications</label><input type="text" id="d_complications"></div>
+          <button type="button" class="btn btn-primary" id="recordDeliveryBtn">Record delivery</button>
+        </fieldset>
+
+        <h4 style="font-size:.9rem;">Newborn</h4>
+        <div id="newbornInfo" style="margin-bottom:12px;"></div>
+        <fieldset id="newbornFieldset">
+          <div class="grid-2">
+            <div class="field"><label>Sex</label><select id="n_sex"><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
+            <div class="field"><label>Birth weight (kg)</label><input type="number" step="0.01" id="n_weight"></div>
+            <div class="field"><label>Apgar 1 min</label><input type="number" id="n_apgar1"></div>
+            <div class="field"><label>Apgar 5 min</label><input type="number" id="n_apgar5"></div>
+            <div class="field"><label>Apgar 10 min</label><input type="number" id="n_apgar10"></div>
+            <div class="field">
+              <label>Outcome</label>
+              <select id="n_outcome"><option value="LIVE_BIRTH">Live birth</option><option value="STILLBIRTH">Stillbirth</option><option value="NEONATAL_DEATH">Neonatal death</option></select>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" id="registerNewbornBtn">Register newborn</button>
+        </fieldset>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/maternity.js"></script>
+</body>
+</html>
