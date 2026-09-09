@@ -8,6 +8,8 @@ let encounter = null;
 let prescriptionId = null;
 let labOrderId = null;
 let imagingOrderId = null;
+let currentRxItems = [];
+let currentRxNumber = null;
 let isReadOnly = false;
 
 (async function init() {
@@ -73,7 +75,24 @@ let isReadOnly = false;
     if (!prescriptionId) { alert('Add at least one medicine first.'); return; }
     alert('Prescription sent to pharmacy.');
   });
+  document.getElementById('printPrescriptionBtn').addEventListener('click', printPrescription);
 })();
+
+function printPrescription() {
+  if (!currentRxItems || currentRxItems.length === 0) { alert('No medicines added yet.'); return; }
+  const body = `
+    <div class="row"><span class="label">Prescription</span><span class="mono">${currentRxNumber || ''}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${new Date().toLocaleDateString('en-GB')}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${patient.first_name} ${patient.last_name} · ${patient.mrn}</span></div>
+    ${patient.allergies ? `<div class="row"><span class="label">Allergies</span><span>${patient.allergies}</span></div>` : ''}
+    <table>
+      <thead><tr><th>Medicine</th><th>Dose</th><th>Route</th><th>Frequency</th><th>Duration</th><th>Qty</th></tr></thead>
+      <tbody>${currentRxItems.map(i => `<tr><td>${i.medicine_name}</td><td>${i.dose || ''}</td><td>${i.route || ''}</td><td>${i.frequency || ''}</td><td>${i.duration || ''}</td><td>${i.quantity || ''}</td></tr>`).join('')}</tbody>
+    </table>
+    <p style="margin-top:20px;">Prescribed by: ${meC.full_name}</p>
+  `;
+  openPrintDocument('Prescription ' + (currentRxNumber || ''), meC.facilities ? meC.facilities.name : 'HCMIS', body);
+}
 
 function calcAgeC(dob) {
   if (!dob) return '—';
@@ -273,6 +292,8 @@ async function loadPrescription() {
 }
 
 function renderRxItems(items, rxNumber) {
+  currentRxItems = items || [];
+  currentRxNumber = rxNumber || null;
   const box = document.getElementById('rxItemsList');
   if (!items || items.length === 0) { box.innerHTML = '<span class="empty">No medicines added yet.</span>'; return; }
   box.innerHTML = (rxNumber ? `<p class="mono" style="color:var(--hc-ink-soft); font-size:.85rem;">${rxNumber}</p>` : '') +
@@ -467,9 +488,24 @@ async function loadReferrals() {
     <div class="panel" style="margin-bottom:6px;"><div class="panel-body" style="padding:10px 14px;">
       <strong class="mono">${r.referral_number}</strong> — ${r.receiving_facility} (${r.urgency})
       <span class="pill ${r.status === 'COMPLETED' ? 'active' : 'inactive'}" style="margin-left:8px;">${r.status}</span>
+      <button class="link-btn" style="margin-left:8px;" onclick='printReferral(${JSON.stringify(r).replace(/'/g, "&apos;")})'>Print</button>
       ${r.reason ? '<br>' + r.reason : ''}
     </div></div>
   `).join('');
+}
+
+function printReferral(r) {
+  const body = `
+    <div class="row"><span class="label">Referral</span><span class="mono">${r.referral_number}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${new Date(r.created_at).toLocaleDateString('en-GB')}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${patient.first_name} ${patient.last_name} · ${patient.mrn}</span></div>
+    <div class="row"><span class="label">Receiving facility</span><span>${r.receiving_facility}</span></div>
+    <div class="row"><span class="label">Urgency</span><span>${r.urgency}</span></div>
+    ${r.reason ? `<div class="row"><span class="label">Reason</span><span>${r.reason}</span></div>` : ''}
+    ${r.clinical_summary ? `<p><strong>Clinical summary</strong><br>${r.clinical_summary}</p>` : ''}
+    ${r.diagnosis ? `<p><strong>Diagnosis</strong><br>${r.diagnosis}</p>` : ''}
+  `;
+  openPrintDocument('Referral ' + r.referral_number, meC.facilities ? meC.facilities.name : 'HCMIS', body);
 }
 
 async function createReferral() {
