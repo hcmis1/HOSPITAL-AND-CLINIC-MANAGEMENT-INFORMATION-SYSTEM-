@@ -111,6 +111,15 @@ function openProfile(id) {
       </div>
     </div>
     <div style="margin-top:20px;">
+      <h4 style="font-size:.9rem; margin-bottom:8px;">Documents</h4>
+      <div id="documentsList" class="empty">Loading…</div>
+      <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+        <input type="text" id="doc_type" placeholder="Document type (e.g. Consent form)" style="flex:1; padding:9px 10px; border:1px solid var(--hc-line); border-radius:6px;">
+        <input type="file" id="doc_file" style="flex:1;">
+        <button class="btn btn-secondary" onclick="uploadDocument('${p.id}')">Upload</button>
+      </div>
+    </div>
+    <div style="margin-top:20px;">
       <h4 style="font-size:.9rem; margin-bottom:8px;">Recent encounters</h4>
       <div id="recentEncounters" class="empty">Loading…</div>
     </div>
@@ -119,6 +128,49 @@ function openProfile(id) {
   document.getElementById('profilePanel').scrollIntoView({ behavior: 'smooth' });
   loadRecentEncounters(p.id);
   loadIdentifiers(p.id);
+  loadDocuments('PATIENT', p.id);
+}
+
+async function loadDocuments(entityType, entityId) {
+  const { data } = await supabaseClient.from('documents').select('*').eq('entity_type', entityType).eq('entity_id', entityId).eq('status', 'ACTIVE').order('uploaded_at', { ascending: false });
+  const box = document.getElementById('documentsList');
+  if (!box) return;
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No documents uploaded.</span>'; return; }
+  box.innerHTML = data.map(d => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+      <span>${d.document_type || d.file_name} — <span style="color:var(--hc-ink-soft); font-size:.85rem;">${new Date(d.uploaded_at).toLocaleDateString('en-GB')}</span></span>
+      <button class="link-btn" onclick="viewDocument('${d.storage_path}')">View</button>
+    </div>
+  `).join('');
+}
+
+async function uploadDocument(patientId) {
+  const fileInput = document.getElementById('doc_file');
+  const file = fileInput.files[0];
+  if (!file) { alert('Choose a file first.'); return; }
+  const docType = document.getElementById('doc_type').value.trim() || file.name;
+
+  const path = `patients/${patientId}/${Date.now()}_${file.name}`;
+  const { error: uploadError } = await supabaseClient.storage.from('documents').upload(path, file);
+  if (uploadError) { alert(uploadError.message); return; }
+
+  const payload = {
+    entity_type: 'PATIENT', entity_id: patientId, document_type: docType,
+    file_name: file.name, storage_path: path, uploaded_by: me.id
+  };
+  const { data, error } = await supabaseClient.from('documents').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'DOCUMENTS', 'documents', data.id, null, payload);
+
+  document.getElementById('doc_type').value = '';
+  fileInput.value = '';
+  await loadDocuments('PATIENT', patientId);
+}
+
+async function viewDocument(path) {
+  const { data, error } = await supabaseClient.storage.from('documents').createSignedUrl(path, 3600);
+  if (error) { alert(error.message); return; }
+  window.open(data.signedUrl, '_blank');
 }
 
 async function loadIdentifiers(patientId) {
