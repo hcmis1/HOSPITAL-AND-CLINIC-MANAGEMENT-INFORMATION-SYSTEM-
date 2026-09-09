@@ -25,12 +25,38 @@ let meL = null;
 
   document.getElementById('resultForm').addEventListener('submit', saveResult);
   document.getElementById('cancelResultBtn').addEventListener('click', () => document.getElementById('resultOverlay').style.display = 'none');
+  document.getElementById('testForm').addEventListener('submit', addTestToCatalogue);
 
   await loadCritical();
   await loadPending();
   await loadValidation();
   await loadCompleted();
+  await loadCatalogue();
 })();
+
+async function addTestToCatalogue(e) {
+  e.preventDefault();
+  const payload = {
+    test_name: document.getElementById('tc_name').value.trim(),
+    category: document.getElementById('tc_category').value.trim(),
+    specimen_type: document.getElementById('tc_specimen').value.trim(),
+    unit: document.getElementById('tc_unit').value.trim(),
+    reference_range: document.getElementById('tc_range').value.trim(),
+    price: parseFloat(document.getElementById('tc_price').value) || 0
+  };
+  const { data, error } = await supabaseClient.from('lab_tests').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'LABORATORY', 'lab_tests', data.id, null, payload);
+  document.getElementById('testForm').reset();
+  await loadCatalogue();
+}
+
+async function loadCatalogue() {
+  const { data } = await supabaseClient.from('lab_tests').select('*').order('test_name');
+  const tbody = document.getElementById('catalogueTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No tests in catalogue yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(t => `<tr><td>${t.test_name}</td><td>${t.category || '—'}</td><td>${t.reference_range || '—'}</td><td>${parseFloat(t.price || 0).toLocaleString()}</td></tr>`).join('');
+}
 
 async function fetchItems(statuses) {
   const { data } = await supabaseClient
