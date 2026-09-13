@@ -154,6 +154,7 @@
               <div class="field"><label>Dosage form</label><input type="text" id="m_form" placeholder="Tablet / Syrup / Injection"></div>
               <div class="field"><label>Unit</label><input type="text" id="m_unit" value="tablet"></div>
               <div class="field"><label>Reorder level</label><input type="number" id="m_reorder" value="0"></div>
+              <div class="field"><label>Default price (UGX)</label><input type="number" step="0.01" id="m_price" value="0"></div>
             </div>
             <button type="submit" class="btn btn-primary">Add medicine</button>
           </form>
@@ -164,8 +165,8 @@
         <div class="panel-header"><h3>Catalogue</h3></div>
         <div class="panel-body">
           <table>
-            <thead><tr><th>Medicine</th><th>Strength</th><th>Form</th><th>In stock</th><th>Reorder level</th><th></th></tr></thead>
-            <tbody id="catalogueTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+            <thead><tr><th>Medicine</th><th>Strength</th><th>Form</th><th>In stock</th><th>Reorder level</th><th>Default price</th><th></th></tr></thead>
+            <tbody id="catalogueTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -258,6 +259,36 @@
           <button type="submit" class="btn btn-primary">Dispense</button>
           <button type="button" class="btn btn-secondary" id="cancelDispenseBtn">Cancel</button>
         </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit medicine overlay (admin only) -->
+<div id="editMedOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:24px 16px;">
+  <div class="panel" style="width:100%; max-width:520px; margin:0;">
+    <div class="panel-header">
+      <h3 id="editMedTitle">Edit medicine</h3>
+      <button class="link-btn" onclick="document.getElementById('editMedOverlay').style.display='none'">Close</button>
+    </div>
+    <div class="panel-body">
+      <form id="editMedForm">
+        <input type="hidden" id="em_id">
+        <div class="grid-2">
+          <div class="field"><label>Generic name</label><input type="text" id="em_generic" required></div>
+          <div class="field"><label>Brand name</label><input type="text" id="em_brand"></div>
+          <div class="field"><label>Strength</label><input type="text" id="em_strength"></div>
+          <div class="field"><label>Dosage form</label><input type="text" id="em_form"></div>
+          <div class="field"><label>Unit</label><input type="text" id="em_unit"></div>
+          <div class="field"><label>Reorder level</label><input type="number" id="em_reorder"></div>
+          <div class="field"><label>Default price (UGX)</label><input type="number" step="0.01" id="em_price" required></div>
+          <div class="field">
+            <label>Status</label>
+            <select id="em_status"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select>
+          </div>
+        </div>
+        <p class="empty" style="margin-top:-8px;">Changing the default price does not change prices already set on existing stock batches — it only affects new batches and dispensing where a batch has no price of its own.</p>
+        <button type="submit" class="btn btn-primary">Save changes</button>
       </form>
     </div>
   </div>
