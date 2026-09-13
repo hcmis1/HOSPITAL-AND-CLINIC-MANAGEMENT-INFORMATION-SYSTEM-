@@ -5,6 +5,7 @@
 let meP = null;
 let medicinesCache = [];
 let batchesCache = [];
+let isPharmAdmin = false;
 let posCart = [];
 
 (async function init() {
@@ -17,6 +18,7 @@ let posCart = [];
     (meP.facilities && meP.facilities.name) ? meP.facilities.name : 'No facility assigned';
   if (['SUPER_ADMIN', 'FACILITY_ADMIN'].includes(meP.role)) {
     document.getElementById('adminNavGroup').style.display = 'block';
+    isPharmAdmin = true;
   }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -27,6 +29,7 @@ let posCart = [];
   });
 
   document.getElementById('medForm').addEventListener('submit', addMedicine);
+  document.getElementById('editMedForm').addEventListener('submit', saveMedicineEdit);
   document.getElementById('stockForm').addEventListener('submit', saveBatch);
   document.getElementById('cancelStockBtn').addEventListener('click', () => document.getElementById('stockOverlay').style.display = 'none');
   document.getElementById('dispenseForm').addEventListener('submit', doDispense);
@@ -60,17 +63,21 @@ function totalStock(medicineId) {
 
 function renderCatalogue() {
   const tbody = document.getElementById('catalogueTable');
-  if (medicinesCache.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No medicines in catalogue yet.</td></tr>'; return; }
-  tbody.innerHTML = medicinesCache.map(m => `
+  if (medicinesCache.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No medicines in catalogue yet.</td></tr>'; return; }
+  tbody.innerHTML = medicinesCache.map(m => {
+    const editBtn = isPharmAdmin ? ` · <button class="link-btn" onclick="openEditMedicineForm('${m.id}')">Edit</button>` : '';
+    return `
     <tr>
       <td>${m.generic_name}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</td>
       <td>${m.strength || '—'}</td>
       <td>${m.dosage_form || '—'}</td>
       <td class="mono">${totalStock(m.id)} ${m.unit}</td>
       <td>${m.reorder_level}</td>
-      <td><button class="link-btn" onclick="openStockForm('${m.id}')">Add stock</button> · <button class="link-btn" onclick="openDosingPanel('${m.id}','${m.generic_name.replace(/'/g, "\\'")}')">Dosing guide</button></td>
+      <td class="mono">${parseFloat(m.default_price || 0).toLocaleString()}</td>
+      <td><button class="link-btn" onclick="openStockForm('${m.id}')">Add stock</button> · <button class="link-btn" onclick="openDosingPanel('${m.id}','${m.generic_name.replace(/'/g, "\\'")}')">Dosing guide</button>${editBtn}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   const sel = document.getElementById('disp_medicine');
   sel.innerHTML = medicinesCache.map(m => `<option value="${m.id}">${m.generic_name}${m.strength ? ' ' + m.strength : ''}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</option>`).join('');
@@ -193,7 +200,10 @@ function findEarliestBatchPrice(medicineId) {
   const eligible = batchesCache
     .filter(b => b.medicine_id === medicineId && b.status === 'ACTIVE' && b.quantity > 0 && new Date(b.expiry_date) >= new Date())
     .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
-  return eligible.length > 0 ? (eligible[0].selling_price || 0) : 0;
+  const medicine = medicinesCache.find(m => m.id === medicineId);
+  const defaultPrice = medicine ? (medicine.default_price || 0) : 0;
+  if (eligible.length === 0) return defaultPrice;
+  return eligible[0].selling_price || defaultPrice;
 }
 
 function addPosItem() {
@@ -429,13 +439,15 @@ async function addMedicine(e) {
     strength: document.getElementById('m_strength').value.trim(),
     dosage_form: document.getElementById('m_form').value.trim(),
     unit: document.getElementById('m_unit').value.trim() || 'tablet',
-    reorder_level: parseInt(document.getElementById('m_reorder').value) || 0
+    reorder_level: parseInt(document.getElementById('m_reorder').value) || 0,
+    default_price: parseFloat(document.getElementById('m_price').value) || 0
   };
   const { data, error } = await supabaseClient.from('medicines').insert(payload).select().single();
   if (error) { alert(error.message); return; }
   await logAudit('CREATE', 'PHARMACY', 'medicines', data.id, null, payload);
   document.getElementById('medForm').reset();
   document.getElementById('m_unit').value = 'tablet';
+  document.getElementById('m_price').value = '0';
   await loadCatalogueAndStock();
   await loadAlerts();
 }
@@ -444,7 +456,47 @@ async function addMedicine(e) {
 function openStockForm(medicineId) {
   document.getElementById('stockForm').reset();
   document.getElementById('s_medicine_id').value = medicineId;
+  const medicine = medicinesCache.find(m => m.id === medicineId);
+  document.getElementById('s_price').value = medicine ? (medicine.default_price || 0) : 0;
   document.getElementById('stockOverlay').style.display = 'flex';
+}
+
+// ---------------- EDIT MEDICINE (ADMIN) ----------------
+function openEditMedicineForm(medicineId) {
+  if (!isPharmAdmin) return;
+  const m = medicinesCache.find(x => x.id === medicineId);
+  if (!m) return;
+  document.getElementById('editMedTitle').textContent = 'Edit medicine — ' + m.generic_name;
+  document.getElementById('em_id').value = m.id;
+  document.getElementById('em_generic').value = m.generic_name || '';
+  document.getElementById('em_brand').value = m.brand_name || '';
+  document.getElementById('em_strength').value = m.strength || '';
+  document.getElementById('em_form').value = m.dosage_form || '';
+  document.getElementById('em_unit').value = m.unit || '';
+  document.getElementById('em_reorder').value = m.reorder_level || 0;
+  document.getElementById('em_price').value = m.default_price || 0;
+  document.getElementById('em_status').value = m.status || 'ACTIVE';
+  document.getElementById('editMedOverlay').style.display = 'flex';
+}
+
+async function saveMedicineEdit(e) {
+  e.preventDefault();
+  const id = document.getElementById('em_id').value;
+  const payload = {
+    generic_name: document.getElementById('em_generic').value.trim(),
+    brand_name: document.getElementById('em_brand').value.trim(),
+    strength: document.getElementById('em_strength').value.trim(),
+    dosage_form: document.getElementById('em_form').value.trim(),
+    unit: document.getElementById('em_unit').value.trim() || 'tablet',
+    reorder_level: parseInt(document.getElementById('em_reorder').value) || 0,
+    default_price: parseFloat(document.getElementById('em_price').value) || 0,
+    status: document.getElementById('em_status').value
+  };
+  const { error } = await supabaseClient.from('medicines').update(payload).eq('id', id);
+  if (error) { alert(error.message); return; }
+  await logAudit('UPDATE', 'PHARMACY', 'medicines', id, null, payload);
+  document.getElementById('editMedOverlay').style.display = 'none';
+  await loadCatalogueAndStock();
 }
 
 async function saveBatch(e) {
@@ -532,6 +584,8 @@ async function doDispense(e) {
   const prescriptionId = document.getElementById('disp_prescription_id').value;
   const medicineId = document.getElementById('disp_medicine').value;
   const qtyNeeded = parseInt(document.getElementById('disp_qty').value);
+  const medicine = medicinesCache.find(m => m.id === medicineId);
+  const defaultPrice = medicine ? (medicine.default_price || 0) : 0;
 
   const available = totalStock(medicineId);
   if (qtyNeeded > available) {
@@ -575,7 +629,7 @@ async function doDispense(e) {
       quantity: -d.take, reference_type: 'PRESCRIPTION', reference_id: prescriptionId, performed_by: meP.id
     });
 
-    const unitPrice = d.batch.selling_price || 0;
+    const unitPrice = d.batch.selling_price || defaultPrice;
     await supabaseClient.from('dispensation_items').insert({
       dispensation_id: dispensationId, prescription_item_id: itemId, medicine_id: medicineId,
       batch_id: d.batch.id, quantity_dispensed: d.take, unit_price: unitPrice, total_price: unitPrice * d.take
@@ -588,13 +642,12 @@ async function doDispense(e) {
   // bill the dispensed items to the encounter's invoice
   const { data: rx } = await supabaseClient.from('prescriptions').select('patient_id, encounter_id').eq('id', prescriptionId).single();
   if (rx) {
-    const medicine = medicinesCache.find(m => m.id === medicineId);
     const inv = await findOrCreateInvoice(rx.patient_id, rx.encounter_id, meP.facility_id, meP.id);
     if (inv) {
       for (const d of deductions) {
         await addInvoiceItem(inv.id, {
           description: medicine ? medicine.generic_name : 'Medicine',
-          quantity: d.take, unit_price: d.batch.selling_price || 0,
+          quantity: d.take, unit_price: d.batch.selling_price || defaultPrice,
           source_module: 'PHARMACY', source_record_id: itemId
         });
       }
