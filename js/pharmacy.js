@@ -35,10 +35,12 @@ let posCart = [];
   document.getElementById('addPosItemBtn').addEventListener('click', addPosItem);
   document.getElementById('completeSaleBtn').addEventListener('click', completeSale);
   document.getElementById('dosingForm').addEventListener('submit', addDosingGuideline);
+  document.getElementById('protocolForm').addEventListener('submit', addDiagnosisProtocol);
 
   await loadCatalogueAndStock();
   await loadAlerts();
   await loadQueue();
+  await loadDiagnosisProtocols();
 })();
 
 async function loadCatalogueAndStock() {
@@ -75,6 +77,9 @@ function renderCatalogue() {
 
   const posSel = document.getElementById('pos_medicine');
   if (posSel) posSel.innerHTML = medicinesCache.map(m => `<option value="${m.id}">${m.generic_name}${m.strength ? ' ' + m.strength : ''}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</option>`).join('');
+
+  const prSel = document.getElementById('pr_medicine');
+  if (prSel) prSel.innerHTML = medicinesCache.map(m => `<option value="${m.id}">${m.generic_name}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</option>`).join('');
 }
 
 function renderStock() {
@@ -307,6 +312,54 @@ function printPosReceipt(firstName, lastName, invoice, payment) {
     <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
   `;
   openPrintDocument('Pharmacy Receipt ' + payment.payment_number, meP.facilities ? meP.facilities.name : 'HCMIS', body);
+}
+// ---------------- DIAGNOSIS PROTOCOLS ----------------
+async function addDiagnosisProtocol(e) {
+  e.preventDefault();
+  const payload = {
+    diagnosis_name: document.getElementById('pr_diagnosis').value.trim(),
+    medicine_id: document.getElementById('pr_medicine').value,
+    line: document.getElementById('pr_line').value,
+    notes: document.getElementById('pr_notes').value.trim()
+  };
+  const { data, error } = await supabaseClient.from('diagnosis_protocols').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'PHARMACY', 'diagnosis_protocols', data.id, null, payload);
+  document.getElementById('protocolForm').reset();
+  await loadDiagnosisProtocols();
+}
+
+async function loadDiagnosisProtocols() {
+  const { data } = await supabaseClient.from('diagnosis_protocols').select('*, medicines(generic_name, brand_name)').order('diagnosis_name');
+  const box = document.getElementById('protocolsList');
+  if (!box) return;
+  if (!data || data.length === 0) { box.innerHTML = '<p class="empty">No protocols set up yet.</p>'; return; }
+
+  const grouped = {};
+  data.forEach(p => { (grouped[p.diagnosis_name] = grouped[p.diagnosis_name] || []).push(p); });
+
+  box.innerHTML = Object.keys(grouped).sort().map(dx => `
+    <div class="panel" style="margin-bottom:8px;">
+      <div class="panel-header"><h3 style="font-size:.95rem;">${dx}</h3></div>
+      <div class="panel-body">
+        ${grouped[dx].map(p => `
+          <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+            <span>
+              <span class="pill ${p.line === 'FIRST_LINE' ? 'active' : 'inactive'}">${p.line.replace('_', ' ')}</span>
+              ${p.medicines ? p.medicines.generic_name : ''} ${p.notes ? '- ' + p.notes : ''}
+            </span>
+            <button class="link-btn danger" onclick="deleteDiagnosisProtocol('${p.id}')">Remove</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function deleteDiagnosisProtocol(id) {
+  await supabaseClient.from('diagnosis_protocols').delete().eq('id', id);
+  await logAudit('DELETE', 'PHARMACY', 'diagnosis_protocols', id, null, null);
+  await loadDiagnosisProtocols();
 }
 // ---------------- DOSING GUIDELINES ----------------
 async function openDosingPanel(medicineId, medicineName) {
