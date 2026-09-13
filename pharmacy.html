@@ -82,6 +82,7 @@
 
     <div class="tabs">
       <button class="tab-btn active" data-tab="dispense">Dispensing queue</button>
+      <button class="tab-btn" data-tab="pos">Walk-in Sale (POS)</button>
       <button class="tab-btn" data-tab="catalogue">Medicine catalogue</button>
       <button class="tab-btn" data-tab="stock">Stock / batches</button>
     </div>
@@ -91,6 +92,50 @@
       <div class="panel">
         <div class="panel-body" id="queueBody">
           <p class="empty">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- POS -->
+    <div class="tab-panel" id="tab-pos">
+      <div class="panel">
+        <div class="panel-header"><h3>Walk-in customer</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label>First name</label><input type="text" id="pos_first" value="Walk-in"></div>
+            <div class="field"><label>Last name</label><input type="text" id="pos_last" value="Customer"></div>
+            <div class="field"><label>Phone (optional)</label><input type="text" id="pos_phone"></div>
+            <div class="field"><label>Sex</label><select id="pos_sex"><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Sale items</h3></div>
+        <div class="panel-body">
+          <div id="posCartList" style="margin-bottom:14px;"></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <select id="pos_medicine" style="flex:2; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;"></select>
+            <input type="number" id="pos_qty" placeholder="Qty" value="1" style="flex:1; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <button type="button" class="btn btn-secondary" id="addPosItemBtn">Add to sale</button>
+          </div>
+          <div class="row" style="display:flex; justify-content:space-between; margin-top:16px; font-weight:600;">
+            <span>Total</span><span id="posTotal">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Payment</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>Method</label>
+              <select id="pos_method"><option>CASH</option><option>MOBILE_MONEY</option><option>BANK</option><option>CARD</option><option>OTHER</option></select>
+            </div>
+            <div class="field"><label>Reference (optional)</label><input type="text" id="pos_ref"></div>
+          </div>
+          <button type="button" class="btn btn-primary" id="completeSaleBtn">Complete sale &amp; print receipt</button>
         </div>
       </div>
     </div>
@@ -186,10 +231,40 @@
   </div>
 </div>
 
+<!-- Dosing guide overlay -->
+<div id="dosingOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:24px 16px;">
+  <div class="panel" style="width:100%; max-width:520px; margin:0;">
+    <div class="panel-header">
+      <h3 id="dosingTitle">Dosing guide</h3>
+      <button class="link-btn" onclick="document.getElementById('dosingOverlay').style.display='none'">Close</button>
+    </div>
+    <div class="panel-body">
+      <div id="dosingList" style="margin-bottom:16px;"></div>
+      <form id="dosingForm">
+        <input type="hidden" id="dg_medicine_id">
+        <div class="field"><label>Age band label</label><input type="text" id="dg_label" placeholder="e.g. Neonate, Infant, Child 1–5y, Adult" required></div>
+        <div class="grid-2">
+          <div class="field"><label>Min age (years)</label><input type="number" step="0.01" id="dg_min" value="0" required></div>
+          <div class="field"><label>Max age (years, blank = no limit)</label><input type="number" step="0.01" id="dg_max"></div>
+        </div>
+        <div class="field"><label>Dose</label><input type="text" id="dg_dose" required></div>
+        <div class="grid-2">
+          <div class="field"><label>Route</label><input type="text" id="dg_route" placeholder="Oral / IV / IM…"></div>
+          <div class="field"><label>Frequency</label><input type="text" id="dg_freq" placeholder="e.g. TDS"></div>
+        </div>
+        <div class="field"><label>Duration</label><input type="text" id="dg_duration" placeholder="e.g. 5 days"></div>
+        <div class="field"><label>Notes</label><input type="text" id="dg_notes"></div>
+        <button type="submit" class="btn btn-primary">Add dosing option</button>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/billing-helpers.js"></script>
+<script src="js/print-helpers.js"></script>
 <script src="js/pharmacy.js"></script>
 </body>
 </html>
