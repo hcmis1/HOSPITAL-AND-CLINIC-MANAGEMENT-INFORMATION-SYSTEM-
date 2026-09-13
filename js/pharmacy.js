@@ -5,6 +5,7 @@
 let meP = null;
 let medicinesCache = [];
 let batchesCache = [];
+let posCart = [];
 
 (async function init() {
   meP = await requireAuth();
@@ -31,6 +32,9 @@ let batchesCache = [];
   document.getElementById('dispenseForm').addEventListener('submit', doDispense);
   document.getElementById('cancelDispenseBtn').addEventListener('click', () => document.getElementById('dispenseOverlay').style.display = 'none');
   document.getElementById('disp_medicine').addEventListener('change', updateStockHint);
+  document.getElementById('addPosItemBtn').addEventListener('click', addPosItem);
+  document.getElementById('completeSaleBtn').addEventListener('click', completeSale);
+  document.getElementById('dosingForm').addEventListener('submit', addDosingGuideline);
 
   await loadCatalogueAndStock();
   await loadAlerts();
@@ -62,12 +66,15 @@ function renderCatalogue() {
       <td>${m.dosage_form || '—'}</td>
       <td class="mono">${totalStock(m.id)} ${m.unit}</td>
       <td>${m.reorder_level}</td>
-      <td><button class="link-btn" onclick="openStockForm('${m.id}')">Add stock</button></td>
+      <td><button class="link-btn" onclick="openStockForm('${m.id}')">Add stock</button> · <button class="link-btn" onclick="openDosingPanel('${m.id}','${m.generic_name.replace(/'/g, "\\'")}')">Dosing guide</button></td>
     </tr>
   `).join('');
 
   const sel = document.getElementById('disp_medicine');
   sel.innerHTML = medicinesCache.map(m => `<option value="${m.id}">${m.generic_name}${m.strength ? ' ' + m.strength : ''}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</option>`).join('');
+
+  const posSel = document.getElementById('pos_medicine');
+  if (posSel) posSel.innerHTML = medicinesCache.map(m => `<option value="${m.id}">${m.generic_name}${m.strength ? ' ' + m.strength : ''}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</option>`).join('');
 }
 
 function renderStock() {
@@ -176,6 +183,187 @@ async function loadAlerts() {
   document.getElementById('alertsList').innerHTML = html;
 }
 
+// ---------------- WALK-IN SALE (POS) ----------------
+function findEarliestBatchPrice(medicineId) {
+  const eligible = batchesCache
+    .filter(b => b.medicine_id === medicineId && b.status === 'ACTIVE' && b.quantity > 0 && new Date(b.expiry_date) >= new Date())
+    .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+  return eligible.length > 0 ? (eligible[0].selling_price || 0) : 0;
+}
+
+function addPosItem() {
+  const medicineId = document.getElementById('pos_medicine').value;
+  const qty = parseInt(document.getElementById('pos_qty').value) || 0;
+  const medicine = medicinesCache.find(m => m.id === medicineId);
+  if (!medicine || qty <= 0) return;
+
+  const available = totalStock(medicineId);
+  if (qty > available) { alert(`Only ${available} in stock.`); return; }
+
+  const unitPrice = findEarliestBatchPrice(medicineId);
+  posCart.push({ medicineId, name: medicine.generic_name, qty, unitPrice });
+  renderPosCart();
+}
+
+function renderPosCart() {
+  const box = document.getElementById('posCartList');
+  if (posCart.length === 0) { box.innerHTML = '<span class="empty">No items added yet.</span>'; document.getElementById('posTotal').textContent = '0'; return; }
+  box.innerHTML = posCart.map((c, idx) => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--hc-line);">
+      <span>${c.name} × ${c.qty} @ ${c.unitPrice.toLocaleString()}</span>
+      <span>${(c.qty * c.unitPrice).toLocaleString()} <button class="link-btn danger" onclick="removePosItem(${idx})">×</button></span>
+    </div>
+  `).join('');
+  const total = posCart.reduce((s, c) => s + c.qty * c.unitPrice, 0);
+  document.getElementById('posTotal').textContent = total.toLocaleString();
+}
+
+function removePosItem(idx) {
+  posCart.splice(idx, 1);
+  renderPosCart();
+}
+
+async function completeSale() {
+  if (posCart.length === 0) { alert('Add at least one item to the sale.'); return; }
+
+  // re-validate stock right before completing
+  for (const c of posCart) {
+    if (c.qty > totalStock(c.medicineId)) { alert(`Insufficient stock for ${c.name}.`); return; }
+  }
+
+  const firstName = document.getElementById('pos_first').value.trim() || 'Walk-in';
+  const lastName = document.getElementById('pos_last').value.trim() || 'Customer';
+  const phone = document.getElementById('pos_phone').value.trim();
+  const sex = document.getElementById('pos_sex').value;
+
+  // reuse an existing patient by phone if one matches, else create a lightweight record
+  let patientId = null;
+  if (phone) {
+    const { data: existing } = await supabaseClient.from('patients').select('id').eq('phone', phone).limit(1).maybeSingle();
+    if (existing) patientId = existing.id;
+  }
+  if (!patientId) {
+    const { data: newPatient, error: patErr } = await supabaseClient.from('patients').insert({
+      first_name: firstName, last_name: lastName, sex, phone, facility_id: meP.facility_id || null, created_by: meP.id
+    }).select().single();
+    if (patErr) { alert(patErr.message); return; }
+    patientId = newPatient.id;
+  }
+
+  const { data: invoice, error: invErr } = await supabaseClient.from('invoices').insert({
+    patient_id: patientId, facility_id: meP.facility_id || null, created_by: meP.id
+  }).select().single();
+  if (invErr) { alert(invErr.message); return; }
+
+  for (const c of posCart) {
+    const eligible = batchesCache
+      .filter(b => b.medicine_id === c.medicineId && b.status === 'ACTIVE' && b.quantity > 0 && new Date(b.expiry_date) >= new Date())
+      .sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+    let remaining = c.qty;
+    for (const batch of eligible) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, batch.quantity);
+      remaining -= take;
+      const newQty = batch.quantity - take;
+      await supabaseClient.from('medicine_batches').update({ quantity: newQty, status: newQty <= 0 ? 'DEPLETED' : 'ACTIVE' }).eq('id', batch.id);
+      await supabaseClient.from('stock_movements').insert({
+        medicine_id: c.medicineId, batch_id: batch.id, movement_type: 'DISPENSING',
+        quantity: -take, reference_type: 'POS_SALE', reference_id: invoice.id, performed_by: meP.id
+      });
+    }
+    await addInvoiceItem(invoice.id, { description: c.name, quantity: c.qty, unit_price: c.unitPrice, source_module: 'PHARMACY' });
+  }
+
+  const { data: freshInvoice } = await supabaseClient.from('invoices').select('*').eq('id', invoice.id).single();
+  const { data: payment, error: payErr } = await supabaseClient.from('payments').insert({
+    invoice_id: invoice.id, patient_id: patientId, amount: freshInvoice.total,
+    payment_method: document.getElementById('pos_method').value,
+    transaction_reference: document.getElementById('pos_ref').value.trim(), received_by: meP.id
+  }).select().single();
+  if (payErr) { alert(payErr.message); return; }
+
+  await supabaseClient.from('invoices').update({ amount_paid: freshInvoice.total }).eq('id', invoice.id);
+  await recalcInvoiceTotals(invoice.id);
+  await logAudit('CREATE', 'PHARMACY', 'invoices', invoice.id, null, { pos_sale: true, total: freshInvoice.total });
+
+  printPosReceipt(firstName, lastName, invoice, payment);
+
+  posCart = [];
+  renderPosCart();
+  document.getElementById('pos_ref').value = '';
+  await loadCatalogueAndStock();
+  await loadAlerts();
+}
+
+function printPosReceipt(firstName, lastName, invoice, payment) {
+  const body = `
+    <div class="row"><span class="label">Receipt</span><span class="mono">${payment.payment_number}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${new Date(payment.payment_date).toLocaleString('en-GB')}</span></div>
+    <div class="row"><span class="label">Customer</span><span>${firstName} ${lastName}</span></div>
+    <table>
+      <thead><tr><th>Item</th><th>Qty</th><th>Unit price</th><th>Total</th></tr></thead>
+      <tbody>${posCart.map(c => `<tr><td>${c.name}</td><td>${c.qty}</td><td>${c.unitPrice.toLocaleString()}</td><td>${(c.qty * c.unitPrice).toLocaleString()}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
+  `;
+  openPrintDocument('Pharmacy Receipt ' + payment.payment_number, meP.facilities ? meP.facilities.name : 'HCMIS', body);
+}
+// ---------------- DOSING GUIDELINES ----------------
+async function openDosingPanel(medicineId, medicineName) {
+  document.getElementById('dosingTitle').textContent = 'Dosing guide — ' + medicineName;
+  document.getElementById('dg_medicine_id').value = medicineId;
+  document.getElementById('dosingForm').reset();
+  document.getElementById('dg_min').value = '0';
+  await loadDosingGuidelines(medicineId);
+  document.getElementById('dosingOverlay').style.display = 'flex';
+}
+
+async function loadDosingGuidelines(medicineId) {
+  const { data } = await supabaseClient.from('medicine_dosing_guidelines').select('*').eq('medicine_id', medicineId).order('age_min_years');
+  const box = document.getElementById('dosingList');
+  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No dosing options set yet — clinicians will need to enter dose manually for this medicine.</span>'; return; }
+  box.innerHTML = data.map(g => `
+    <div class="panel" style="margin-bottom:6px;">
+      <div class="panel-body" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong>${g.age_band_label}</strong> (${g.age_min_years}${g.age_max_years != null ? '–' + g.age_max_years : '+'} yrs) —
+          ${g.dose} ${g.route || ''} ${g.frequency || ''} ${g.duration ? 'for ' + g.duration : ''}
+          ${g.notes ? `<br><span style="color:var(--hc-ink-soft); font-size:.85rem;">${g.notes}</span>` : ''}
+        </div>
+        <button class="link-btn danger" onclick="deleteDosingGuideline('${g.id}','${medicineId}')">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addDosingGuideline(e) {
+  e.preventDefault();
+  const medicineId = document.getElementById('dg_medicine_id').value;
+  const payload = {
+    medicine_id: medicineId,
+    age_band_label: document.getElementById('dg_label').value.trim(),
+    age_min_years: parseFloat(document.getElementById('dg_min').value) || 0,
+    age_max_years: document.getElementById('dg_max').value ? parseFloat(document.getElementById('dg_max').value) : null,
+    dose: document.getElementById('dg_dose').value.trim(),
+    route: document.getElementById('dg_route').value.trim(),
+    frequency: document.getElementById('dg_freq').value.trim(),
+    duration: document.getElementById('dg_duration').value.trim(),
+    notes: document.getElementById('dg_notes').value.trim()
+  };
+  const { data, error } = await supabaseClient.from('medicine_dosing_guidelines').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'PHARMACY', 'medicine_dosing_guidelines', data.id, null, payload);
+  document.getElementById('dosingForm').reset();
+  document.getElementById('dg_medicine_id').value = medicineId;
+  document.getElementById('dg_min').value = '0';
+  await loadDosingGuidelines(medicineId);
+}
+
+async function deleteDosingGuideline(id, medicineId) {
+  await supabaseClient.from('medicine_dosing_guidelines').delete().eq('id', id);
+  await logAudit('DELETE', 'PHARMACY', 'medicine_dosing_guidelines', id, null, null);
+  await loadDosingGuidelines(medicineId);
+}
 // ---------------- CATALOGUE ----------------
 async function addMedicine(e) {
   e.preventDefault();
