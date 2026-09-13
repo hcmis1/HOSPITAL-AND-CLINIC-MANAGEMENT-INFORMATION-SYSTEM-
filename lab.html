@@ -185,8 +185,8 @@
         <div class="panel-header"><h3>Catalogue</h3></div>
         <div class="panel-body">
           <table>
-            <thead><tr><th>Test</th><th>Category</th><th>Reference range</th><th>Price</th></tr></thead>
-            <tbody id="catalogueTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+            <thead><tr><th>Test</th><th>Category</th><th>Reference range</th><th>Price</th><th>Actions</th></tr></thead>
+            <tbody id="catalogueTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -195,22 +195,57 @@
   </div>
 </div>
 
+<!-- Edit test overlay (admin only) -->
+<div id="editTestOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:24px 16px;">
+  <div class="panel" style="width:100%; max-width:640px; margin:0;">
+    <div class="panel-header">
+      <h3 id="editTestTitle">Edit test</h3>
+      <button class="link-btn" onclick="document.getElementById('editTestOverlay').style.display='none'">Close</button>
+    </div>
+    <div class="panel-body">
+      <form id="editTestForm">
+        <input type="hidden" id="et_id">
+        <div class="field"><label>Test name</label><input type="text" id="et_name" disabled style="opacity:.7;"></div>
+        <p class="empty" style="margin-top:-8px;">Name can't be changed here, since past orders reference it by name — add a new test instead if it was named wrong.</p>
+        <div class="grid-2">
+          <div class="field"><label>Category</label><input type="text" id="et_category"></div>
+          <div class="field"><label>Specimen type</label><input type="text" id="et_specimen"></div>
+          <div class="field"><label>Unit</label><input type="text" id="et_unit"></div>
+          <div class="field"><label>Reference range</label><input type="text" id="et_range"></div>
+          <div class="field"><label>Price (UGX)</label><input type="number" step="0.01" id="et_price" required></div>
+          <div class="field">
+            <label>Status</label>
+            <select id="et_status"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </form>
+
+      <div id="editTestParamsSection" style="display:none; margin-top:20px; border-top:1px solid var(--hc-line); padding-top:16px;">
+        <h3 style="font-size:.95rem; margin-bottom:8px;">Panel parameters</h3>
+        <table style="width:100%;">
+          <thead><tr><th>Parameter</th><th>Unit</th><th>Reference range</th><th></th></tr></thead>
+          <tbody id="editParamsRows"></tbody>
+        </table>
+        <button type="button" class="btn btn-secondary" id="addParamRowBtn" style="margin-top:8px;">+ Add parameter</button>
+        <button type="button" class="btn btn-primary" id="saveParamsBtn" style="margin-top:8px;">Save parameters</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Enter result overlay -->
-<div id="resultOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:center; justify-content:center; z-index:50;">
-  <div class="panel" style="width:100%; max-width:420px; margin:16px;">
+<div id="resultOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:24px 16px;">
+  <div class="panel" style="width:100%; max-width:640px; margin:0;">
     <div class="panel-header"><h3 id="resultTitle">Enter result</h3></div>
     <div class="panel-body">
       <form id="resultForm">
         <input type="hidden" id="r_item_id">
-        <div class="field"><label>Result (text)</label><input type="text" id="r_value"></div>
-        <div class="field"><label>Numeric result</label><input type="number" step="any" id="r_numeric"></div>
-        <div class="field"><label>Unit</label><input type="text" id="r_unit"></div>
-        <div class="field"><label>Reference range</label><input type="text" id="r_ref"></div>
-        <div class="field">
-          <label>Flag</label>
-          <select id="r_flag"><option value="NORMAL">Normal</option><option value="LOW">Low</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option></select>
-        </div>
-        <div class="field"><label>Comment</label><input type="text" id="r_comment"></div>
+        <table style="width:100%; margin-bottom:12px;">
+          <thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference range</th><th>Flag</th></tr></thead>
+          <tbody id="resultParamRows"></tbody>
+        </table>
+        <div class="field"><label>Comment (optional)</label><input type="text" id="r_comment"></div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn btn-primary">Save result</button>
           <button type="button" class="btn btn-secondary" id="cancelResultBtn">Cancel</button>
