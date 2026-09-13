@@ -84,6 +84,7 @@
       <button class="tab-btn active" data-tab="dispense">Dispensing queue</button>
       <button class="tab-btn" data-tab="pos">Walk-in Sale (POS)</button>
       <button class="tab-btn" data-tab="catalogue">Medicine catalogue</button>
+      <button class="tab-btn" data-tab="protocols">Diagnosis Protocols</button>
       <button class="tab-btn" data-tab="stock">Stock / batches</button>
     </div>
 
@@ -167,6 +168,37 @@
             <tbody id="catalogueTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- DIAGNOSIS PROTOCOLS -->
+    <div class="tab-panel" id="tab-protocols">
+      <div class="panel">
+        <div class="panel-header"><h3>Add treatment protocol</h3></div>
+        <div class="panel-body">
+          <form id="protocolForm">
+            <div class="field"><label>Diagnosis / condition name</label><input type="text" id="pr_diagnosis" placeholder="e.g. Uncomplicated Malaria" required></div>
+            <div class="grid-2">
+              <div class="field"><label>Medicine</label><select id="pr_medicine" required></select></div>
+              <div class="field">
+                <label>Line of treatment</label>
+                <select id="pr_line">
+                  <option value="FIRST_LINE">First line</option>
+                  <option value="ALTERNATIVE">Alternative</option>
+                  <option value="SECOND_LINE">Second line</option>
+                  <option value="ADJUNCT">Adjunct</option>
+                </select>
+              </div>
+            </div>
+            <div class="field"><label>Notes (optional)</label><input type="text" id="pr_notes"></div>
+            <button type="submit" class="btn btn-primary">Add to protocol</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Existing protocols</h3></div>
+        <div class="panel-body" id="protocolsList"><p class="empty">Loading...</p></div>
       </div>
     </div>
 
