@@ -11,6 +11,7 @@ let imagingOrderId = null;
 let currentRxItems = [];
 let currentRxNumber = null;
 let medicinesForDosing = [];
+let patientWeightKg = null;
 let isReadOnly = false;
 
 (async function init() {
@@ -54,6 +55,7 @@ let isReadOnly = false;
   }
 
   await loadTriage();
+  await loadPatientWeight();
   await loadNote();
   await loadDiagnoses();
   await loadPrescription();
@@ -151,6 +153,16 @@ async function ensureEncounter(encounterId, appointmentId) {
   }
 
   return data;
+}
+
+async function loadPatientWeight() {
+  const { data: thisEncounter } = await supabaseClient.from('triage_records').select('weight').eq('encounter_id', encounter.id).maybeSingle();
+  if (thisEncounter && thisEncounter.weight) { patientWeightKg = parseFloat(thisEncounter.weight); return; }
+
+  const { data: anyRecent } = await supabaseClient.from('triage_records').select('weight, triaged_at')
+    .eq('patient_id', patient.id).not('weight', 'is', null)
+    .order('triaged_at', { ascending: false }).limit(1).maybeSingle();
+  patientWeightKg = anyRecent ? parseFloat(anyRecent.weight) : null;
 }
 
 // ---------------- TRIAGE ----------------
@@ -509,14 +521,31 @@ async function showDosingSuggestions(typedName) {
   if (!guidelines || guidelines.length === 0) { box.innerHTML = '<span class="empty">No dosing guide set for this medicine — enter dose manually.</span>'; return; }
 
   const age = precisePatientAgeYears();
-  const inRange = (g) => age != null && age >= g.age_min_years && (g.age_max_years == null || age <= g.age_max_years);
+  const inRange = (g) => {
+    const hasWeightBand = g.weight_min_kg != null || g.weight_max_kg != null;
+    if (hasWeightBand && patientWeightKg != null) {
+      return patientWeightKg >= (g.weight_min_kg ?? 0) && (g.weight_max_kg == null || patientWeightKg <= g.weight_max_kg);
+    }
+    if (hasWeightBand && patientWeightKg == null) return false; // can't confirm without a recorded weight
+    return age != null && age >= g.age_min_years && (g.age_max_years == null || age <= g.age_max_years);
+  };
 
-  box.innerHTML = guidelines.map(g => `
-    <span class="diag-chip" style="cursor:pointer; ${inRange(g) ? 'border:2px solid var(--hc-teal-700);' : ''}" onclick='applyDosingSuggestion(${JSON.stringify(g).replace(/'/g, "&apos;")})'>
-      ${g.age_band_label} (${g.age_min_years}${g.age_max_years != null ? '–' + g.age_max_years : '+'}y): ${g.dose} ${g.route || ''} ${g.frequency || ''}
-      ${inRange(g) ? ' ✓ matches age' : ''}
+  const weightNote = patientWeightKg != null
+    ? `<div style="font-size:.82rem; color:var(--hc-ink-soft); margin-bottom:4px;">Using recorded weight: ${patientWeightKg}kg</div>`
+    : '';
+
+  box.innerHTML = weightNote + guidelines.map(g => {
+    const hasWeightBand = g.weight_min_kg != null || g.weight_max_kg != null;
+    const weightLabel = hasWeightBand ? ` [${g.weight_min_kg ?? 0}${g.weight_max_kg != null ? '–' + g.weight_max_kg : '+'}kg]` : '';
+    const matched = inRange(g);
+    const needsWeight = hasWeightBand && patientWeightKg == null;
+    return `
+    <span class="diag-chip" style="cursor:pointer; ${matched ? 'border:2px solid var(--hc-teal-700);' : ''}" onclick='applyDosingSuggestion(${JSON.stringify(g).replace(/'/g, "&apos;")})'>
+      ${g.age_band_label}${weightLabel}: ${g.dose} ${g.route || ''} ${g.frequency || ''}
+      ${matched ? ' ✓ matches patient' : ''}${needsWeight ? ' ⚠ record weight to confirm' : ''}
     </span>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function applyDosingSuggestion(g) {
