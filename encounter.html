@@ -176,7 +176,8 @@
         <div id="rxItemsList"></div>
         <fieldset id="rxFieldset">
           <div class="rx-row">
-            <input type="text" id="rx_name" placeholder="Medicine">
+            <input type="text" id="rx_name" list="medicinesDatalist" placeholder="Medicine">
+            <datalist id="medicinesDatalist"></datalist>
             <input type="text" id="rx_dose" placeholder="Dose">
             <input type="text" id="rx_route" placeholder="Route">
             <input type="text" id="rx_freq" placeholder="Frequency">
@@ -184,6 +185,7 @@
             <input type="text" id="rx_qty" placeholder="Quantity">
             <button class="btn btn-secondary" id="addRxItemBtn" type="button">Add</button>
           </div>
+          <div id="dosingSuggestions" style="margin-top:8px;"></div>
           <input type="text" id="rx_instructions" placeholder="Instructions (optional)" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; margin-top:6px;">
         </fieldset>
         <button class="btn btn-primary" id="savePrescriptionBtn" style="margin-top:14px;">Send to pharmacy</button>
