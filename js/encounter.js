@@ -267,13 +267,48 @@ async function saveNote(sign) {
 async function loadDiagnoses() {
   const { data } = await supabaseClient.from('diagnoses').select('*').eq('encounter_id', encounter.id).order('created_at');
   const box = document.getElementById('diagList');
-  if (!data || data.length === 0) { box.innerHTML = '<span class="empty">No diagnoses recorded yet.</span>'; return; }
+  if (!data || data.length === 0) {
+    box.innerHTML = '<span class="empty">No diagnoses recorded yet.</span>';
+    const sugBox = document.getElementById('treatmentSuggestions');
+    if (sugBox) sugBox.innerHTML = '';
+    return;
+  }
   box.innerHTML = data.map(d => `
     <span class="diag-chip">
       ${d.diagnosis_name}${d.diagnosis_code ? ' (' + d.diagnosis_code + ')' : ''} <span style="opacity:.7;">(${d.diagnosis_type.toLowerCase()}, ${d.certainty.toLowerCase()})</span>
       ${!isReadOnly ? `<button onclick="deleteDiagnosis('${d.id}')">×</button>` : ''}
     </span>
   `).join('');
+
+  await loadTreatmentSuggestions(data.map(d => d.diagnosis_name));
+}
+
+async function loadTreatmentSuggestions(diagnosisNames) {
+  const box = document.getElementById('treatmentSuggestions');
+  if (!box) return;
+  if (!diagnosisNames || diagnosisNames.length === 0) { box.innerHTML = ''; return; }
+
+  const { data } = await supabaseClient.from('diagnosis_protocols').select('*, medicines(generic_name, brand_name)');
+  if (!data || data.length === 0) { box.innerHTML = ''; return; }
+
+  const matches = data.filter(p =>
+    diagnosisNames.some(dx => dx.toLowerCase().includes(p.diagnosis_name.toLowerCase()) || p.diagnosis_name.toLowerCase().includes(dx.toLowerCase()))
+  );
+  if (matches.length === 0) { box.innerHTML = ''; return; }
+
+  box.innerHTML = '<div style="font-size:.85rem; color:var(--hc-ink-soft); margin-bottom:6px;">Suggested treatment for the diagnosis above:</div>' +
+    matches.map(p => `
+      <span class="diag-chip" style="cursor:pointer; background:var(--hc-amber-soft); color:#7a4a10;" onclick='useTreatmentSuggestion(${JSON.stringify(p.medicines.generic_name)})'>
+        ${p.line.replace('_', ' ')}: ${p.medicines.generic_name} ${p.notes ? '(' + p.notes + ')' : ''}
+      </span>
+    `).join('');
+}
+
+function useTreatmentSuggestion(medicineName) {
+  const rxInput = document.getElementById('rx_name');
+  rxInput.value = medicineName;
+  rxInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showDosingSuggestions(medicineName);
 }
 
 async function addDiagnosis() {
