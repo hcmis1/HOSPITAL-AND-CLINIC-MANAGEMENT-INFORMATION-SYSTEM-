@@ -246,7 +246,10 @@
         <div class="grid-2">
           <div class="field"><label>Min age (years)</label><input type="number" step="0.01" id="dg_min" value="0" required></div>
           <div class="field"><label>Max age (years, blank = no limit)</label><input type="number" step="0.01" id="dg_max"></div>
+          <div class="field"><label>Min weight (kg, optional)</label><input type="number" step="0.1" id="dg_wmin"></div>
+          <div class="field"><label>Max weight (kg, optional)</label><input type="number" step="0.1" id="dg_wmax"></div>
         </div>
+        <p class="empty" style="margin-top:-8px; margin-bottom:14px;">If this medicine is dosed by weight in the guidelines (e.g. antimalarials), fill in the weight fields — the app will match on the patient's recorded weight first when one is available, and fall back to age otherwise.</p>
         <div class="field"><label>Dose</label><input type="text" id="dg_dose" required></div>
         <div class="grid-2">
           <div class="field"><label>Route</label><input type="text" id="dg_route" placeholder="Oral / IV / IM…"></div>
