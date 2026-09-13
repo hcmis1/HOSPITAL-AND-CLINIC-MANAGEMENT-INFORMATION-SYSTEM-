@@ -326,7 +326,8 @@ async function loadDosingGuidelines(medicineId) {
     <div class="panel" style="margin-bottom:6px;">
       <div class="panel-body" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <strong>${g.age_band_label}</strong> (${g.age_min_years}${g.age_max_years != null ? '–' + g.age_max_years : '+'} yrs) —
+          <strong>${g.age_band_label}</strong>
+          (${g.age_min_years}${g.age_max_years != null ? '–' + g.age_max_years : '+'} yrs${g.weight_min_kg != null ? ', ' + g.weight_min_kg + (g.weight_max_kg != null ? '–' + g.weight_max_kg : '+') + 'kg' : ''}) —
           ${g.dose} ${g.route || ''} ${g.frequency || ''} ${g.duration ? 'for ' + g.duration : ''}
           ${g.notes ? `<br><span style="color:var(--hc-ink-soft); font-size:.85rem;">${g.notes}</span>` : ''}
         </div>
@@ -344,6 +345,8 @@ async function addDosingGuideline(e) {
     age_band_label: document.getElementById('dg_label').value.trim(),
     age_min_years: parseFloat(document.getElementById('dg_min').value) || 0,
     age_max_years: document.getElementById('dg_max').value ? parseFloat(document.getElementById('dg_max').value) : null,
+    weight_min_kg: document.getElementById('dg_wmin').value ? parseFloat(document.getElementById('dg_wmin').value) : null,
+    weight_max_kg: document.getElementById('dg_wmax').value ? parseFloat(document.getElementById('dg_wmax').value) : null,
     dose: document.getElementById('dg_dose').value.trim(),
     route: document.getElementById('dg_route').value.trim(),
     frequency: document.getElementById('dg_freq').value.trim(),
