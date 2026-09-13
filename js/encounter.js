@@ -10,6 +10,7 @@ let labOrderId = null;
 let imagingOrderId = null;
 let currentRxItems = [];
 let currentRxNumber = null;
+let medicinesForDosing = [];
 let isReadOnly = false;
 
 (async function init() {
@@ -68,6 +69,12 @@ let isReadOnly = false;
   document.getElementById('addLabTestBtn').addEventListener('click', addLabTest);
   document.getElementById('addImgServiceBtn').addEventListener('click', addImagingService);
   document.getElementById('createReferralBtn').addEventListener('click', createReferral);
+
+  let rxNameTimer;
+  document.getElementById('rx_name').addEventListener('input', (e) => {
+    clearTimeout(rxNameTimer);
+    rxNameTimer = setTimeout(() => showDosingSuggestions(e.target.value.trim()), 300);
+  });
 
   await loadCatalogueDatalists();
   await loadReferrals();
@@ -477,6 +484,47 @@ async function loadCatalogueDatalists() {
 
   const { data: services } = await supabaseClient.from('imaging_services').select('name').eq('status', 'ACTIVE');
   document.getElementById('imgServicesDatalist').innerHTML = (services || []).map(s => `<option value="${s.name}">`).join('');
+
+  const { data: meds } = await supabaseClient.from('medicines').select('id, generic_name, brand_name').eq('status', 'ACTIVE');
+  medicinesForDosing = meds || [];
+  document.getElementById('medicinesDatalist').innerHTML = medicinesForDosing.map(m => `<option value="${m.generic_name}">`).join('');
+}
+
+function precisePatientAgeYears() {
+  if (!patient.date_of_birth) return null;
+  return (new Date() - new Date(patient.date_of_birth)) / (365.25 * 24 * 3600 * 1000);
+}
+
+async function showDosingSuggestions(typedName) {
+  const box = document.getElementById('dosingSuggestions');
+  if (!typedName) { box.innerHTML = ''; return; }
+
+  const match = medicinesForDosing.find(m =>
+    m.generic_name.toLowerCase() === typedName.toLowerCase() ||
+    (m.brand_name && m.brand_name.toLowerCase() === typedName.toLowerCase())
+  );
+  if (!match) { box.innerHTML = ''; return; }
+
+  const { data: guidelines } = await supabaseClient.from('medicine_dosing_guidelines').select('*').eq('medicine_id', match.id).order('age_min_years');
+  if (!guidelines || guidelines.length === 0) { box.innerHTML = '<span class="empty">No dosing guide set for this medicine — enter dose manually.</span>'; return; }
+
+  const age = precisePatientAgeYears();
+  const inRange = (g) => age != null && age >= g.age_min_years && (g.age_max_years == null || age <= g.age_max_years);
+
+  box.innerHTML = guidelines.map(g => `
+    <span class="diag-chip" style="cursor:pointer; ${inRange(g) ? 'border:2px solid var(--hc-teal-700);' : ''}" onclick='applyDosingSuggestion(${JSON.stringify(g).replace(/'/g, "&apos;")})'>
+      ${g.age_band_label} (${g.age_min_years}${g.age_max_years != null ? '–' + g.age_max_years : '+'}y): ${g.dose} ${g.route || ''} ${g.frequency || ''}
+      ${inRange(g) ? ' ✓ matches age' : ''}
+    </span>
+  `).join('');
+}
+
+function applyDosingSuggestion(g) {
+  document.getElementById('rx_dose').value = g.dose || '';
+  document.getElementById('rx_route').value = g.route || '';
+  document.getElementById('rx_freq').value = g.frequency || '';
+  document.getElementById('rx_duration').value = g.duration || '';
+  if (g.notes) document.getElementById('rx_instructions').value = g.notes;
 }
 
 // ---------------- REFERRAL ----------------
