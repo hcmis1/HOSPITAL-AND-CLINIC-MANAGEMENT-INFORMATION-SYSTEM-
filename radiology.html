@@ -78,6 +78,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="pending">Pending</button>
       <button class="tab-btn" data-tab="completed">Completed</button>
+      <button class="tab-btn" data-tab="walkin">Walk-in Imaging</button>
       <button class="tab-btn" data-tab="catalogue">Service Catalogue</button>
     </div>
 
@@ -103,6 +104,49 @@
       </div>
     </div>
 
+    <div class="tab-panel" id="tab-walkin">
+      <div class="panel">
+        <div class="panel-header"><h3>Walk-in patient</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field"><label>First name</label><input type="text" id="wi_first" value="Walk-in"></div>
+            <div class="field"><label>Last name</label><input type="text" id="wi_last" value="Customer"></div>
+            <div class="field"><label>Phone (optional)</label><input type="text" id="wi_phone"></div>
+            <div class="field"><label>Sex</label><select id="wi_sex"><option value="MALE">Male</option><option value="FEMALE">Female</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Imaging services</h3></div>
+        <div class="panel-body">
+          <div id="wiCartList" style="margin-bottom:14px;"></div>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="wi_service_name" list="imgServicesDatalist2" placeholder="Service name" style="flex:2; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px;">
+            <datalist id="imgServicesDatalist2"></datalist>
+            <button type="button" class="btn btn-secondary" id="addWiServiceBtn">Add service</button>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-top:16px; font-weight:600;">
+            <span>Total</span><span id="wiTotal">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Payment</h3></div>
+        <div class="panel-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>Method</label>
+              <select id="wi_method"><option>CASH</option><option>MOBILE_MONEY</option><option>BANK</option><option>CARD</option><option>OTHER</option></select>
+            </div>
+            <div class="field"><label>Reference (optional)</label><input type="text" id="wi_ref"></div>
+          </div>
+          <button type="button" class="btn btn-primary" id="registerWiBtn">Register, bill &amp; print</button>
+        </div>
+      </div>
+    </div>
+
     <div class="tab-panel" id="tab-catalogue">
       <div class="panel">
         <div class="panel-header"><h3>Add service to catalogue</h3></div>
@@ -112,6 +156,7 @@
               <div class="field"><label>Service name</label><input type="text" id="sc_name" required></div>
               <div class="field"><label>Modality</label><input type="text" id="sc_modality" placeholder="X-ray / Ultrasound / CT / MRI"></div>
               <div class="field"><label>Body part</label><input type="text" id="sc_bodypart"></div>
+              <div class="field"><label>Preparation</label><input type="text" id="sc_prep" placeholder="e.g. Fasting 6-8 hrs, Full bladder"></div>
               <div class="field"><label>Price</label><input type="number" step="0.01" id="sc_price"></div>
             </div>
             <button type="submit" class="btn btn-primary">Add service</button>
@@ -122,13 +167,41 @@
         <div class="panel-header"><h3>Catalogue</h3></div>
         <div class="panel-body">
           <table>
-            <thead><tr><th>Service</th><th>Modality</th><th>Price</th></tr></thead>
-            <tbody id="catalogueTable"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+            <thead><tr><th>Service</th><th>Modality</th><th>Preparation</th><th>Price</th><th>Actions</th></tr></thead>
+            <tbody id="catalogueTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- Edit service overlay (admin only) -->
+<div id="editServiceOverlay" style="display:none; position:fixed; inset:0; background:rgba(18,33,31,.5); align-items:flex-start; justify-content:center; z-index:50; overflow-y:auto; padding:24px 16px;">
+  <div class="panel" style="width:100%; max-width:480px; margin:0;">
+    <div class="panel-header">
+      <h3 id="editServiceTitle">Edit service</h3>
+      <button class="link-btn" onclick="document.getElementById('editServiceOverlay').style.display='none'">Close</button>
+    </div>
+    <div class="panel-body">
+      <form id="editServiceForm">
+        <input type="hidden" id="es_id">
+        <div class="field"><label>Service name</label><input type="text" id="es_name" disabled style="opacity:.7;"></div>
+        <p class="empty" style="margin-top:-8px;">Name can't be changed here, since past orders reference it by name.</p>
+        <div class="grid-2">
+          <div class="field"><label>Modality</label><input type="text" id="es_modality"></div>
+          <div class="field"><label>Body part</label><input type="text" id="es_bodypart"></div>
+          <div class="field"><label>Preparation</label><input type="text" id="es_prep"></div>
+          <div class="field"><label>Price (UGX)</label><input type="number" step="0.01" id="es_price" required></div>
+          <div class="field">
+            <label>Status</label>
+            <select id="es_status"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </form>
+    </div>
   </div>
 </div>
 
