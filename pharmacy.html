@@ -84,6 +84,7 @@
       <button class="tab-btn active" data-tab="dispense">Dispensing queue</button>
       <button class="tab-btn" data-tab="pos">Walk-in Sale (POS)</button>
       <button class="tab-btn" data-tab="catalogue">Medicine catalogue</button>
+      <button class="tab-btn" data-tab="controlled">Controlled Substances</button>
       <button class="tab-btn" data-tab="protocols">Diagnosis Protocols</button>
       <button class="tab-btn" data-tab="stock">Stock / batches</button>
     </div>
@@ -172,6 +173,39 @@
       </div>
     </div>
 
+    <!-- CONTROLLED SUBSTANCES -->
+    <div class="tab-panel" id="tab-controlled">
+      <div class="panel">
+        <div class="panel-header"><h3>Current balances</h3></div>
+        <div class="panel-body" id="controlledBalances"><p class="empty">Loading…</p></div>
+      </div>
+
+      <div class="panel" id="controlledAdjustPanel" style="display:none;">
+        <div class="panel-header"><h3>Record adjustment</h3></div>
+        <div class="panel-body">
+          <p class="empty" style="margin-top:-4px;">For losses, damage, spillage, or correcting a past entry. This never edits history — it adds a new dated row.</p>
+          <form id="adjustForm">
+            <div class="grid-2">
+              <div class="field"><label>Medicine</label><select id="adj_medicine" required></select></div>
+              <div class="field"><label>Quantity change</label><input type="number" id="adj_qty" placeholder="e.g. -5 for a loss" required></div>
+            </div>
+            <div class="field"><label>Reason (required)</label><input type="text" id="adj_reason" required></div>
+            <button type="submit" class="btn btn-primary">Record adjustment</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h3>Register (most recent first)</h3></div>
+        <div class="panel-body">
+          <table>
+            <thead><tr><th>Date</th><th>Medicine</th><th>Type</th><th>Qty</th><th>Balance</th><th>Patient</th><th>By / Witness</th></tr></thead>
+            <tbody id="controlledRegisterTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- DIAGNOSIS PROTOCOLS -->
     <div class="tab-panel" id="tab-protocols">
       <div class="panel">
@@ -255,6 +289,10 @@
         </div>
         <div class="field"><label>Quantity</label><input type="number" id="disp_qty" required></div>
         <p class="empty" id="disp_stock_hint"></p>
+        <div class="field" id="disp_witness_field" style="display:none;">
+          <label>Witnessed by <span style="font-weight:400; color:var(--hc-ink-soft);">(controlled substance — required)</span></label>
+          <select id="disp_witness"></select>
+        </div>
         <div style="display:flex; gap:10px;">
           <button type="submit" class="btn btn-primary">Dispense</button>
           <button type="button" class="btn btn-secondary" id="cancelDispenseBtn">Cancel</button>
