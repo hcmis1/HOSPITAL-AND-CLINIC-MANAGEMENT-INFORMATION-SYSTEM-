@@ -321,7 +321,7 @@ function printPosReceipt(firstName, lastName, invoice, payment) {
     </table>
     <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
   `;
-  openPrintDocument('Pharmacy Receipt ' + payment.payment_number, meP.facilities ? meP.facilities.name : 'HCMIS', body);
+  openPrintDocument('Pharmacy Receipt ' + payment.payment_number, meP.facilities, body, { documentType: 'receipt', signedBy: meP.full_name, signedRole: 'Pharmacist/Dispenser' });
 }
 // ---------------- DIAGNOSIS PROTOCOLS ----------------
 async function addDiagnosisProtocol(e) {
