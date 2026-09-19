@@ -360,6 +360,45 @@ function renderRxItems(items, rxNumber) {
     `).join('');
 }
 
+// Checks a newly-added medicine against everything already in this
+// prescription. Returns false (blocking the add) only if the user
+// declines to proceed after seeing every flagged pair.
+async function checkDrugInteractions(newDrugName) {
+  if (!currentRxItems || currentRxItems.length === 0) return true;
+
+  const findMed = (name) => medicinesForDosing.find(m =>
+    name.toLowerCase().includes(m.generic_name.toLowerCase()) ||
+    (m.brand_name && name.toLowerCase().includes(m.brand_name.toLowerCase()))
+  );
+  const newMed = findMed(newDrugName);
+  if (!newMed) return true; // not in the catalogue -- nothing to check against
+
+  const checkedPairs = new Set();
+  for (const item of currentRxItems) {
+    const existingMed = findMed(item.medicine_name);
+    if (!existingMed || existingMed.id === newMed.id) continue;
+    const pairKey = [existingMed.id, newMed.id].sort().join('-');
+    if (checkedPairs.has(pairKey)) continue;
+    checkedPairs.add(pairKey);
+
+    const { data: interactions } = await supabaseClient
+      .from('drug_interactions')
+      .select('*')
+      .or(`and(medicine_a_id.eq.${newMed.id},medicine_b_id.eq.${existingMed.id}),and(medicine_a_id.eq.${existingMed.id},medicine_b_id.eq.${newMed.id})`);
+
+    for (const interaction of (interactions || [])) {
+      const proceed = confirm(
+        `⚠ ${interaction.severity} interaction: ${newDrugName} + ${item.medicine_name}\n\n` +
+        `${interaction.clinical_effect}\n\n` +
+        (interaction.management ? `Management: ${interaction.management}\n\n` : '') +
+        `Continue prescribing "${newDrugName}" anyway?`
+      );
+      if (!proceed) return false;
+    }
+  }
+  return true;
+}
+
 async function addRxItem() {
   const name = document.getElementById('rx_name').value.trim();
   if (!name) return;
@@ -373,6 +412,9 @@ async function addRxItem() {
       if (!proceed) return;
     }
   }
+
+  const interactionOk = await checkDrugInteractions(name);
+  if (!interactionOk) return;
 
   if (!prescriptionId) {
     const { data, error } = await supabaseClient.from('prescriptions').insert({
