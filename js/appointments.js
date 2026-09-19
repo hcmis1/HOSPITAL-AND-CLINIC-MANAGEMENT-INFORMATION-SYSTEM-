@@ -37,6 +37,17 @@ let meA = null;
   });
 
   document.getElementById('apptForm').addEventListener('submit', bookAppointment);
+
+  let rcSearchTimer;
+  document.getElementById('rc_patient_search').addEventListener('input', (e) => {
+    clearTimeout(rcSearchTimer);
+    const term = e.target.value.trim();
+    if (!term) { document.getElementById('rcPatientResults').innerHTML = ''; return; }
+    rcSearchTimer = setTimeout(() => searchRecallPatients(term), 250);
+  });
+  document.getElementById('rcEnrollBtn').addEventListener('click', enrollRecall);
+
+  await loadRecallList();
 })();
 
 async function loadDepartmentOptions() {
@@ -188,4 +199,94 @@ async function advanceStatus(id, newStatus) {
   await logAudit('UPDATE', 'APPOINTMENTS', 'appointments', id, null, { status: newStatus });
   await loadQueue();
   await loadUpcoming();
+}
+
+// ---------------- CHRONIC CARE RECALL ----------------
+async function searchRecallPatients(term) {
+  const { data } = await supabaseClient.from('patients').select('*')
+    .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,phone.ilike.%${term}%,mrn.ilike.%${term}%`)
+    .limit(8);
+  const box = document.getElementById('rcPatientResults');
+  if (!data || data.length === 0) { box.innerHTML = '<div class="empty">No matches</div>'; return; }
+  box.innerHTML = data.map(p => `
+    <div class="link-btn" style="display:block; padding:6px 0;" onclick='selectRecallPatient(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+      ${p.first_name} ${p.last_name} · ${p.mrn} ${p.phone ? '· ' + p.phone : ''}
+    </div>
+  `).join('');
+}
+
+function selectRecallPatient(p) {
+  document.getElementById('rc_patient_id').value = p.id;
+  document.getElementById('rcSelectedPatient').innerHTML = `<span class="pill active">${p.first_name} ${p.last_name} · ${p.mrn}</span>`;
+  document.getElementById('rcPatientResults').innerHTML = '';
+  document.getElementById('rc_patient_search').value = '';
+}
+
+async function enrollRecall() {
+  const patientId = document.getElementById('rc_patient_id').value;
+  const condition = document.getElementById('rc_condition').value.trim();
+  const nextDate = document.getElementById('rc_next_date').value;
+  if (!patientId) { alert('Search for and select a patient first.'); return; }
+  if (!condition || !nextDate) { alert('Enter a condition and a next review date.'); return; }
+
+  const payload = {
+    patient_id: patientId, condition_name: condition, next_review_date: nextDate,
+    notes: document.getElementById('rc_notes').value.trim(), created_by: meA.id
+  };
+  const { data, error } = await supabaseClient.from('chronic_care_followups').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'APPOINTMENTS', 'chronic_care_followups', data.id, null, payload);
+
+  document.getElementById('rc_patient_id').value = '';
+  document.getElementById('rcSelectedPatient').innerHTML = '';
+  document.getElementById('rc_condition').value = '';
+  document.getElementById('rc_next_date').value = '';
+  document.getElementById('rc_notes').value = '';
+  await loadRecallList();
+}
+
+async function loadRecallList() {
+  const { data } = await supabaseClient
+    .from('chronic_care_followups')
+    .select('*, patients(first_name, last_name, mrn, phone)')
+    .eq('status', 'ACTIVE')
+    .order('next_review_date', { ascending: true });
+
+  const tbody = document.getElementById('recallTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="empty">No one currently on the recall list.</td></tr>'; return; }
+
+  const today = new Date().toISOString().slice(0, 10);
+  tbody.innerHTML = data.map(r => {
+    const overdue = r.next_review_date < today;
+    return `
+    <tr ${overdue ? 'style="background:#FDECEC;"' : ''}>
+      <td class="mono">${r.next_review_date}${overdue ? ' <strong>(overdue)</strong>' : ''}</td>
+      <td>${r.patients ? r.patients.first_name + ' ' + r.patients.last_name + ' · ' + r.patients.mrn + (r.patients.phone ? ' · ' + r.patients.phone : '') : 'Unknown'}</td>
+      <td>${r.condition_name}${r.notes ? '<br><span style="font-size:.8rem; color:var(--hc-ink-soft);">' + r.notes + '</span>' : ''}</td>
+      <td class="mono">${r.last_review_date || '—'}</td>
+      <td>
+        <button class="link-btn" onclick="markReviewed('${r.id}')">Mark reviewed</button>
+        · <button class="link-btn danger" onclick="removeFromRecall('${r.id}')">Remove</button>
+      </td>
+    </tr>
+  `;
+  }).join('');
+}
+
+async function markReviewed(id) {
+  const daysAhead = prompt('Reviewed today. Days until next review? (e.g. 30, 90)', '30');
+  if (!daysAhead || isNaN(parseInt(daysAhead))) return;
+  const next = new Date();
+  next.setDate(next.getDate() + parseInt(daysAhead));
+  const payload = { last_review_date: new Date().toISOString().slice(0, 10), next_review_date: next.toISOString().slice(0, 10) };
+  await supabaseClient.from('chronic_care_followups').update(payload).eq('id', id);
+  await logAudit('UPDATE', 'APPOINTMENTS', 'chronic_care_followups', id, null, payload);
+  await loadRecallList();
+}
+
+async function removeFromRecall(id) {
+  if (!confirm('Remove this patient from the chronic care recall list?')) return;
+  await supabaseClient.from('chronic_care_followups').update({ status: 'COMPLETED' }).eq('id', id);
+  await logAudit('UPDATE', 'APPOINTMENTS', 'chronic_care_followups', id, null, { status: 'COMPLETED' });
+  await loadRecallList();
 }
