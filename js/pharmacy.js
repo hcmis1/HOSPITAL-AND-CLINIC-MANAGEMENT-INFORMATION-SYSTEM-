@@ -35,15 +35,19 @@ let posCart = [];
   document.getElementById('dispenseForm').addEventListener('submit', doDispense);
   document.getElementById('cancelDispenseBtn').addEventListener('click', () => document.getElementById('dispenseOverlay').style.display = 'none');
   document.getElementById('disp_medicine').addEventListener('change', updateStockHint);
+  document.getElementById('disp_medicine').addEventListener('change', toggleWitnessField);
   document.getElementById('addPosItemBtn').addEventListener('click', addPosItem);
   document.getElementById('completeSaleBtn').addEventListener('click', completeSale);
   document.getElementById('dosingForm').addEventListener('submit', addDosingGuideline);
   document.getElementById('protocolForm').addEventListener('submit', addDiagnosisProtocol);
+  document.getElementById('adjustForm').addEventListener('submit', recordAdjustment);
 
   await loadCatalogueAndStock();
   await loadAlerts();
   await loadQueue();
   await loadDiagnosisProtocols();
+  await loadControlledBalances();
+  await loadControlledRegister();
 })();
 
 async function loadCatalogueAndStock() {
@@ -499,6 +503,109 @@ async function saveMedicineEdit(e) {
   await loadCatalogueAndStock();
 }
 
+// ---------------- CONTROLLED SUBSTANCE REGISTER ----------------
+// Appends one row to the ledger and returns the new balance. Never
+// updates or deletes existing rows -- corrections are new rows.
+async function recordControlledTransaction({ medicineId, transactionType, quantity, patientId, patientName, prescriptionId, prescriberName, batchId, witnessedBy, reason }) {
+  const { data: last } = await supabaseClient
+    .from('controlled_substance_register')
+    .select('balance_after')
+    .eq('medicine_id', medicineId)
+    .order('transaction_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const prevBalance = last ? parseFloat(last.balance_after) : 0;
+  const balanceAfter = prevBalance + quantity;
+
+  const { error } = await supabaseClient.from('controlled_substance_register').insert({
+    medicine_id: medicineId, transaction_type: transactionType, quantity, balance_after: balanceAfter,
+    patient_id: patientId || null, patient_name_snapshot: patientName || null,
+    prescription_id: prescriptionId || null, prescriber_name_snapshot: prescriberName || null,
+    batch_id: batchId || null, performed_by: meP.id, witnessed_by: witnessedBy || null, reason: reason || null
+  });
+  if (error) console.error('Controlled substance register write failed:', error.message);
+  return balanceAfter;
+}
+
+async function loadControlledBalances() {
+  const controlledMeds = medicinesCache.filter(m => m.is_controlled);
+  const box = document.getElementById('controlledBalances');
+  if (controlledMeds.length === 0) { box.innerHTML = '<p class="empty">No medicines are flagged as controlled substances.</p>'; return; }
+
+  const rows = await Promise.all(controlledMeds.map(async m => {
+    const { data: last } = await supabaseClient
+      .from('controlled_substance_register')
+      .select('balance_after')
+      .eq('medicine_id', m.id)
+      .order('transaction_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { name: m.generic_name, balance: last ? last.balance_after : 0 };
+  }));
+
+  box.innerHTML = `
+    <table>
+      <thead><tr><th>Medicine</th><th>Register balance</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${r.name}</td><td class="mono">${r.balance}</td></tr>`).join('')}</tbody>
+    </table>
+    <p class="empty" style="margin-top:8px;">This is the narcotic register balance, tracked separately from general stock quantity — the two should normally match. Investigate any mismatch immediately.</p>
+  `;
+
+  if (isPharmAdmin) {
+    document.getElementById('controlledAdjustPanel').style.display = 'block';
+    document.getElementById('adj_medicine').innerHTML = controlledMeds.map(m => `<option value="${m.id}">${m.generic_name}</option>`).join('');
+  }
+}
+
+async function loadControlledRegister() {
+  const { data } = await supabaseClient
+    .from('controlled_substance_register')
+    .select('*, medicines(generic_name)')
+    .order('transaction_date', { ascending: false })
+    .limit(100);
+
+  const tbody = document.getElementById('controlledRegisterTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No entries yet.</td></tr>'; return; }
+
+  const staffIds = [...new Set(data.flatMap(r => [r.performed_by, r.witnessed_by]).filter(Boolean))];
+  const { data: staff } = staffIds.length > 0
+    ? await supabaseClient.from('app_users').select('id, full_name').in('id', staffIds)
+    : { data: [] };
+  const staffName = id => (staff || []).find(s => s.id === id)?.full_name || '—';
+
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td class="mono">${new Date(r.transaction_date).toLocaleString('en-GB')}</td>
+      <td>${r.medicines ? r.medicines.generic_name : '—'}</td>
+      <td>${r.transaction_type}</td>
+      <td class="mono">${r.quantity > 0 ? '+' : ''}${r.quantity}</td>
+      <td class="mono">${r.balance_after}</td>
+      <td>${r.patient_name_snapshot || '—'}</td>
+      <td>${staffName(r.performed_by)}${r.witnessed_by ? ' / witness: ' + staffName(r.witnessed_by) : ''}${r.reason ? '<br><span style="font-size:.8rem; color:var(--hc-ink-soft);">' + r.reason + '</span>' : ''}</td>
+    </tr>
+  `).join('');
+}
+
+async function recordAdjustment(e) {
+  e.preventDefault();
+  const medicineId = document.getElementById('adj_medicine').value;
+  const qty = parseFloat(document.getElementById('adj_qty').value);
+  const reason = document.getElementById('adj_reason').value.trim();
+  if (!qty || !reason) { alert('Enter a non-zero quantity and a reason.'); return; }
+
+  await recordControlledTransaction({ medicineId, transactionType: 'ADJUSTMENT', quantity: qty, reason });
+  await logAudit('ADJUST', 'PHARMACY', 'controlled_substance_register', medicineId, null, { quantity: qty, reason });
+
+  document.getElementById('adjustForm').reset();
+  await loadControlledBalances();
+  await loadControlledRegister();
+}
+
+async function loadWitnessOptions() {
+  const { data } = await supabaseClient.from('app_users').select('id, full_name').eq('status', 'ACTIVE').order('full_name');
+  document.getElementById('disp_witness').innerHTML = '<option value="">Select witness…</option>' + (data || []).filter(u => u.id !== meP.id).map(u => `<option value="${u.id}">${u.full_name}</option>`).join('');
+}
+
 async function saveBatch(e) {
   e.preventDefault();
   const medicineId = document.getElementById('s_medicine_id').value;
@@ -519,9 +626,18 @@ async function saveBatch(e) {
   });
   await logAudit('CREATE', 'PHARMACY', 'medicine_batches', data.id, null, payload);
 
+  const medicine = medicinesCache.find(m => m.id === medicineId);
+  if (medicine && medicine.is_controlled) {
+    await recordControlledTransaction({
+      medicineId, transactionType: 'RECEIVED', quantity: payload.quantity, batchId: data.id,
+      reason: `Stock received — batch ${payload.batch_number || ''}, supplier ${payload.supplier || 'not specified'}`
+    });
+  }
+
   document.getElementById('stockOverlay').style.display = 'none';
   await loadCatalogueAndStock();
   await loadAlerts();
+  await loadControlledBalances();
 }
 
 // ---------------- DISPENSING QUEUE ----------------
@@ -569,8 +685,23 @@ function openDispenseForm(itemId, prescriptionId, medicineNameHint, qtyHint) {
   );
   if (guess) document.getElementById('disp_medicine').value = guess.id;
   updateStockHint();
+  toggleWitnessField();
 
   document.getElementById('dispenseOverlay').style.display = 'flex';
+}
+
+async function toggleWitnessField() {
+  const medId = document.getElementById('disp_medicine').value;
+  const medicine = medicinesCache.find(m => m.id === medId);
+  const field = document.getElementById('disp_witness_field');
+  if (medicine && medicine.is_controlled) {
+    field.style.display = 'block';
+    document.getElementById('disp_witness').required = true;
+    await loadWitnessOptions();
+  } else {
+    field.style.display = 'none';
+    document.getElementById('disp_witness').required = false;
+  }
 }
 
 function updateStockHint() {
@@ -590,6 +721,12 @@ async function doDispense(e) {
   const available = totalStock(medicineId);
   if (qtyNeeded > available) {
     alert(`Insufficient stock — only ${available} available.`);
+    return;
+  }
+
+  const witnessId = document.getElementById('disp_witness').value;
+  if (medicine && medicine.is_controlled && !witnessId) {
+    alert('This is a controlled substance — select a witness before dispensing.');
     return;
   }
 
@@ -640,7 +777,21 @@ async function doDispense(e) {
   await logAudit('DISPENSE', 'PHARMACY', 'prescription_items', itemId, null, { medicine_id: medicineId, quantity: qtyNeeded });
 
   // bill the dispensed items to the encounter's invoice
-  const { data: rx } = await supabaseClient.from('prescriptions').select('patient_id, encounter_id').eq('id', prescriptionId).single();
+  const { data: rx } = await supabaseClient.from('prescriptions').select('patient_id, encounter_id, patients(first_name, last_name), app_users:prescriber_id(full_name)').eq('id', prescriptionId).single();
+
+  if (medicine && medicine.is_controlled && rx) {
+    for (const d of deductions) {
+      await recordControlledTransaction({
+        medicineId, transactionType: 'DISPENSED', quantity: -d.take,
+        patientId: rx.patient_id, patientName: rx.patients ? `${rx.patients.first_name} ${rx.patients.last_name}` : null,
+        prescriptionId, prescriberName: rx.app_users ? rx.app_users.full_name : null,
+        batchId: d.batch.id, witnessedBy: witnessId
+      });
+    }
+    await loadControlledBalances();
+    await loadControlledRegister();
+  }
+
   if (rx) {
     const inv = await findOrCreateInvoice(rx.patient_id, rx.encounter_id, meP.facility_id, meP.id);
     if (inv) {
