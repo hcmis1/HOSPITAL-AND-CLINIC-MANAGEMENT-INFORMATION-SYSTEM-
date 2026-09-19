@@ -165,6 +165,13 @@
       <div class="panel">
         <div class="panel-header"><h3>Catalogue</h3></div>
         <div class="panel-body">
+          <div class="grid-2" style="margin-bottom:12px;">
+            <div class="field"><label>Search</label><input type="text" id="cat_search" placeholder="Search by name…"></div>
+            <div class="field">
+              <label>Category</label>
+              <select id="cat_filter"><option value="">All categories</option></select>
+            </div>
+          </div>
           <table>
             <thead><tr><th>Medicine</th><th>Strength</th><th>Form</th><th>In stock</th><th>Reorder level</th><th>Default price</th><th></th></tr></thead>
             <tbody id="catalogueTable"><tr><td colspan="7" class="empty">Loading…</td></tr></tbody>
@@ -233,7 +240,10 @@
 
       <div class="panel">
         <div class="panel-header"><h3>Existing protocols</h3></div>
-        <div class="panel-body" id="protocolsList"><p class="empty">Loading...</p></div>
+        <div class="panel-body">
+          <div class="field" style="margin-bottom:12px;"><label>Search</label><input type="text" id="dx_search" placeholder="Search by condition name…"></div>
+          <div id="protocolsList"><p class="empty">Loading...</p></div>
+        </div>
       </div>
     </div>
 
