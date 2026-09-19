@@ -124,6 +124,45 @@
       </div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header"><h3>Add to chronic care recall</h3></div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Patient</label>
+          <input type="text" id="rc_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+          <div id="rcPatientResults" style="margin-top:6px;"></div>
+          <input type="hidden" id="rc_patient_id">
+          <div id="rcSelectedPatient" style="margin-top:8px;"></div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Condition</label>
+            <input type="text" id="rc_condition" list="chronicConditionsDatalist" placeholder="e.g. Type 2 Diabetes">
+            <datalist id="chronicConditionsDatalist">
+              <option value="Type 2 Diabetes"><option value="Type 1 Diabetes">
+              <option value="Hypertension"><option value="Tuberculosis">
+              <option value="Epilepsy"><option value="Sickle Cell Disease">
+              <option value="Asthma"><option value="Chronic Hepatitis B">
+              <option value="HIV Care">
+            </datalist>
+          </div>
+          <div class="field"><label>Next review date</label><input type="date" id="rc_next_date" required></div>
+        </div>
+        <div class="field"><label>Notes (optional)</label><input type="text" id="rc_notes"></div>
+        <button class="btn btn-primary" id="rcEnrollBtn" type="button">Add to recall list</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Chronic care follow-ups due</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Next review</th><th>Patient</th><th>Condition</th><th>Last reviewed</th><th></th></tr></thead>
+          <tbody id="recallTable"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
