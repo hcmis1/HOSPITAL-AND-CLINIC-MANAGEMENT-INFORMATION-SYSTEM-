@@ -41,6 +41,9 @@ let posCart = [];
   document.getElementById('dosingForm').addEventListener('submit', addDosingGuideline);
   document.getElementById('protocolForm').addEventListener('submit', addDiagnosisProtocol);
   document.getElementById('adjustForm').addEventListener('submit', recordAdjustment);
+  document.getElementById('cat_search').addEventListener('input', renderCatalogue);
+  document.getElementById('cat_filter').addEventListener('change', renderCatalogue);
+  document.getElementById('dx_search').addEventListener('input', renderProtocolsList);
 
   await loadCatalogueAndStock();
   await loadAlerts();
@@ -67,12 +70,28 @@ function totalStock(medicineId) {
 
 function renderCatalogue() {
   const tbody = document.getElementById('catalogueTable');
-  if (medicinesCache.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No medicines in catalogue yet.</td></tr>'; return; }
-  tbody.innerHTML = medicinesCache.map(m => {
+
+  // Populate the category dropdown once, from whatever categories exist
+  const catSel = document.getElementById('cat_filter');
+  if (catSel && catSel.options.length <= 1) {
+    const categories = [...new Set(medicinesCache.map(m => m.therapeutic_category).filter(Boolean))].sort();
+    catSel.innerHTML = '<option value="">All categories</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+  }
+
+  const searchTerm = (document.getElementById('cat_search')?.value || '').toLowerCase().trim();
+  const categoryFilter = document.getElementById('cat_filter')?.value || '';
+  const filtered = medicinesCache.filter(m => {
+    const matchesSearch = !searchTerm || m.generic_name.toLowerCase().includes(searchTerm) || (m.brand_name && m.brand_name.toLowerCase().includes(searchTerm));
+    const matchesCategory = !categoryFilter || m.therapeutic_category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty">${medicinesCache.length === 0 ? 'No medicines in catalogue yet.' : 'No medicines match this search/filter.'}</td></tr>`; return; }
+  tbody.innerHTML = filtered.map(m => {
     const editBtn = isPharmAdmin ? ` · <button class="link-btn" onclick="openEditMedicineForm('${m.id}')">Edit</button>` : '';
     return `
     <tr>
-      <td>${m.generic_name}${m.brand_name ? ' (' + m.brand_name + ')' : ''}</td>
+      <td>${m.generic_name}${m.brand_name ? ' (' + m.brand_name + ')' : ''}${m.therapeutic_category ? '<br><span class="pill active" style="font-size:.75rem;">' + m.therapeutic_category + '</span>' : ''}</td>
       <td>${m.strength || '—'}</td>
       <td>${m.dosage_form || '—'}</td>
       <td class="mono">${totalStock(m.id)} ${m.unit}</td>
@@ -343,14 +362,28 @@ async function addDiagnosisProtocol(e) {
   await loadDiagnosisProtocols();
 }
 
+let diagnosisProtocolsCache = [];
+
 async function loadDiagnosisProtocols() {
   const { data } = await supabaseClient.from('diagnosis_protocols').select('*, medicines(generic_name, brand_name)').order('diagnosis_name');
+  diagnosisProtocolsCache = data || [];
+  renderProtocolsList();
+}
+
+function renderProtocolsList() {
   const box = document.getElementById('protocolsList');
   if (!box) return;
-  if (!data || data.length === 0) { box.innerHTML = '<p class="empty">No protocols set up yet.</p>'; return; }
+  if (diagnosisProtocolsCache.length === 0) { box.innerHTML = '<p class="empty">No protocols set up yet.</p>'; return; }
+
+  const searchTerm = (document.getElementById('dx_search')?.value || '').toLowerCase().trim();
+  const filtered = searchTerm
+    ? diagnosisProtocolsCache.filter(p => p.diagnosis_name.toLowerCase().includes(searchTerm))
+    : diagnosisProtocolsCache;
+
+  if (filtered.length === 0) { box.innerHTML = '<p class="empty">No conditions match this search.</p>'; return; }
 
   const grouped = {};
-  data.forEach(p => { (grouped[p.diagnosis_name] = grouped[p.diagnosis_name] || []).push(p); });
+  filtered.forEach(p => { (grouped[p.diagnosis_name] = grouped[p.diagnosis_name] || []).push(p); });
 
   box.innerHTML = Object.keys(grouped).sort().map(dx => `
     <div class="panel" style="margin-bottom:8px;">
