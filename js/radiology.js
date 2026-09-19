@@ -212,7 +212,7 @@ function printWiImagingReceipt(firstName, lastName, order, payment) {
     <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
     <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Present this slip for imaging.</p>
   `;
-  openPrintDocument('Imaging Order ' + order.order_number, meR.facilities ? meR.facilities.name : 'HCMIS', body);
+  openPrintDocument('Imaging Order ' + order.order_number, meR.facilities, body, { documentType: 'receipt', signedBy: meR.full_name, signedRole: 'Radiology' });
 }
 
 async function fetchItems(statuses) {
@@ -269,7 +269,7 @@ function printRadiologyResult(item) {
     ` : '<p>No report on file.</p>'}
     <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Radiology report</p>
   `;
-  openPrintDocument('Radiology Result — ' + item.imaging_orders.order_number, meR.facilities ? meR.facilities.name : 'HCMIS', body);
+  openPrintDocument('Radiology Result — ' + item.imaging_orders.order_number, meR.facilities, body, { signedBy: meR.full_name, signedRole: 'Radiographer/Radiologist' });
 }
 
 function openReportForm(itemId, serviceName) {
