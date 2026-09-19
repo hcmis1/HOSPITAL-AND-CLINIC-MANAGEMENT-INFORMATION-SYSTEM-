@@ -123,6 +123,8 @@
             </div>
           </div>
           <div class="field"><label>Notes</label><input type="text" id="t_notes"></div>
+          <div id="bmiDisplay" style="margin-bottom:8px; font-size:.9rem; color:var(--hc-ink-soft);"></div>
+          <div id="vitalsWarning" style="margin-bottom:12px;"></div>
           <button class="btn btn-secondary" id="saveTriageBtn">Save triage</button>
         </fieldset>
       </div>
@@ -135,9 +137,25 @@
         <fieldset id="noteFieldset">
           <div class="field"><label>Chief complaint</label><input type="text" id="n_chief"></div>
           <div class="field"><label>History of presenting illness</label><textarea id="n_history" rows="3" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Past medical &amp; surgical history</label><textarea id="n_pmh" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Drug history <span style="font-weight:400; color:var(--hc-ink-soft);">(current medications, not prescribed here)</span></label><textarea id="n_drug_history" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+          <div class="field"><label>Social history <span style="font-weight:400; color:var(--hc-ink-soft);">(smoking, alcohol, occupation, etc.)</span></label><textarea id="n_social" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
           <div class="field"><label>Examination findings</label><textarea id="n_exam" rows="3" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
           <div class="field"><label>Assessment</label><textarea id="n_assessment" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
           <div class="field"><label>Plan</label><textarea id="n_plan" rows="2" style="width:100%; padding:11px 12px; border:1px solid var(--hc-line); border-radius:6px; font-family:var(--font-sans);"></textarea></div>
+
+          <div class="panel" style="margin-bottom:16px;">
+            <div class="panel-header"><h3 style="font-size:.9rem;">Schedule follow-up (optional)</h3></div>
+            <div class="panel-body">
+              <div class="grid-2">
+                <div class="field"><label>Condition</label><input type="text" id="fu_condition" placeholder="e.g. Hypertension"></div>
+                <div class="field"><label>Next review date</label><input type="date" id="fu_date"></div>
+              </div>
+              <button type="button" class="btn btn-secondary" id="scheduleFollowUpBtn">Add to chronic care recall</button>
+              <div id="fuStatus" style="margin-top:6px; font-size:.85rem; color:var(--hc-ink-soft);"></div>
+            </div>
+          </div>
+
           <div style="display:flex; gap:10px;">
             <button class="btn btn-secondary" id="saveNoteBtn">Save draft</button>
             <button class="btn btn-primary" id="signNoteBtn">Sign &amp; complete encounter</button>
