@@ -163,6 +163,70 @@
       </div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header"><h3>Uganda EPI schedule (reference)</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th>Age</th><th>Vaccines</th></tr></thead>
+          <tbody>
+            <tr><td>At birth</td><td>BCG, OPV0</td></tr>
+            <tr><td>6 weeks</td><td>OPV1, Pentavalent 1, PCV 1, Rotavirus 1</td></tr>
+            <tr><td>10 weeks</td><td>OPV2, Pentavalent 2, PCV 2, Rotavirus 2</td></tr>
+            <tr><td>14 weeks</td><td>OPV3, Pentavalent 3, PCV 3, IPV</td></tr>
+            <tr><td>9 months</td><td>Measles-Rubella 1, Yellow Fever, Vitamin A</td></tr>
+            <tr><td>18 months</td><td>Measles-Rubella 2</td></tr>
+            <tr><td>Every 6 months from 6mo</td><td>Vitamin A</td></tr>
+            <tr><td>Pregnant women</td><td>Tetanus Toxoid (TT1-TT5, per prior doses/history)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Record immunization</h3></div>
+      <div class="panel-body">
+        <div class="field">
+          <label>Patient</label>
+          <input type="text" id="im_patient_search" placeholder="Type name, phone or MRN…" autocomplete="off">
+          <div id="imPatientResults" style="margin-top:6px;"></div>
+          <input type="hidden" id="im_patient_id">
+          <div id="imSelectedPatient" style="margin-top:8px;"></div>
+        </div>
+        <div id="imHistory" style="margin-bottom:14px;"></div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Vaccine</label>
+            <input type="text" id="im_vaccine" list="vaccineDatalist" placeholder="e.g. Pentavalent">
+            <datalist id="vaccineDatalist">
+              <option value="BCG"><option value="OPV0"><option value="OPV1"><option value="OPV2"><option value="OPV3">
+              <option value="Pentavalent 1"><option value="Pentavalent 2"><option value="Pentavalent 3">
+              <option value="PCV 1"><option value="PCV 2"><option value="PCV 3">
+              <option value="Rotavirus 1"><option value="Rotavirus 2"><option value="IPV">
+              <option value="Measles-Rubella 1"><option value="Measles-Rubella 2">
+              <option value="Yellow Fever"><option value="Vitamin A">
+              <option value="Tetanus Toxoid (TT1)"><option value="Tetanus Toxoid (TT2)">
+              <option value="Tetanus Toxoid (TT3)"><option value="Tetanus Toxoid (TT4)"><option value="Tetanus Toxoid (TT5)">
+            </datalist>
+          </div>
+          <div class="field"><label>Date given</label><input type="date" id="im_date"></div>
+          <div class="field"><label>Batch number</label><input type="text" id="im_batch"></div>
+          <div class="field"><label>Site</label><input type="text" id="im_site" placeholder="e.g. Left thigh, Oral"></div>
+        </div>
+        <div class="field"><label>Notes (optional)</label><input type="text" id="im_notes"></div>
+        <button class="btn btn-primary" id="imRecordBtn" type="button">Record immunization</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Recently recorded</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Date</th><th>Patient</th><th>Vaccine</th><th>Batch</th></tr></thead>
+          <tbody id="imRecentTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 </div>
 
