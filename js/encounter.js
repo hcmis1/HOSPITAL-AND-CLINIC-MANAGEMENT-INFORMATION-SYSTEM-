@@ -66,6 +66,10 @@ let isReadOnly = false;
   document.getElementById('saveTriageBtn').addEventListener('click', saveTriage);
   document.getElementById('saveNoteBtn').addEventListener('click', () => saveNote(false));
   document.getElementById('signNoteBtn').addEventListener('click', () => saveNote(true));
+  document.getElementById('scheduleFollowUpBtn').addEventListener('click', scheduleFollowUp);
+  ['t_temp', 't_pulse', 't_rr', 't_spo2', 't_sys', 't_dia', 't_weight', 't_height'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updateVitalsDisplay);
+  });
   document.getElementById('addDiagBtn').addEventListener('click', addDiagnosis);
   document.getElementById('addRxItemBtn').addEventListener('click', addRxItem);
   document.getElementById('addLabTestBtn').addEventListener('click', addLabTest);
@@ -179,6 +183,43 @@ async function loadTriage() {
   document.getElementById('t_pain').value = data.pain_score || '';
   document.getElementById('t_category').value = data.triage_category || '';
   document.getElementById('t_notes').value = data.notes || '';
+  updateVitalsDisplay();
+}
+
+function updateVitalsDisplay() {
+  const weight = parseFloat(document.getElementById('t_weight').value);
+  const height = parseFloat(document.getElementById('t_height').value);
+  const bmiBox = document.getElementById('bmiDisplay');
+  if (weight && height) {
+    const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+    let category = 'Normal';
+    if (bmi < 18.5) category = 'Underweight';
+    else if (bmi >= 25 && bmi < 30) category = 'Overweight';
+    else if (bmi >= 30) category = 'Obese';
+    bmiBox.textContent = `BMI: ${bmi} (${category})`;
+  } else {
+    bmiBox.textContent = '';
+  }
+
+  const flags = [];
+  const temp = parseFloat(document.getElementById('t_temp').value);
+  const pulse = parseInt(document.getElementById('t_pulse').value);
+  const rr = parseInt(document.getElementById('t_rr').value);
+  const spo2 = parseInt(document.getElementById('t_spo2').value);
+  const sys = parseInt(document.getElementById('t_sys').value);
+  const dia = parseInt(document.getElementById('t_dia').value);
+
+  if (!isNaN(temp) && (temp >= 38 || temp < 35)) flags.push(`Temperature ${temp}°C ${temp >= 38 ? '(fever)' : '(hypothermia)'}`);
+  if (!isNaN(pulse) && (pulse > 100 || pulse < 50)) flags.push(`Pulse ${pulse} bpm ${pulse > 100 ? '(tachycardia)' : '(bradycardia)'}`);
+  if (!isNaN(rr) && (rr > 20 || rr < 12)) flags.push(`Respiratory rate ${rr}/min ${rr > 20 ? '(tachypnoea)' : '(low)'}`);
+  if (!isNaN(spo2) && spo2 < 94) flags.push(`SpO₂ ${spo2}% (low oxygen saturation)`);
+  if (!isNaN(sys) && (sys >= 140 || sys < 90)) flags.push(`BP systolic ${sys} ${sys >= 140 ? '(high)' : '(low)'}`);
+  if (!isNaN(dia) && (dia >= 90 || dia < 60)) flags.push(`BP diastolic ${dia} ${dia >= 90 ? '(high)' : '(low)'}`);
+
+  const warnBox = document.getElementById('vitalsWarning');
+  warnBox.innerHTML = flags.length > 0
+    ? `<div class="allergy-flag">⚠ Abnormal vitals: ${flags.join('; ')}</div>`
+    : '';
 }
 
 async function saveTriage() {
@@ -211,6 +252,7 @@ async function saveTriage() {
     await logAudit('CREATE', 'CLINICAL', 'triage_records', data.id, null, payload);
   }
   alert('Triage saved.');
+  updateVitalsDisplay();
 }
 
 // ---------------- CONSULTATION NOTE ----------------
@@ -219,6 +261,9 @@ async function loadNote() {
   if (!data) return;
   document.getElementById('n_chief').value = data.chief_complaint || '';
   document.getElementById('n_history').value = data.history || '';
+  document.getElementById('n_pmh').value = data.past_medical_history || '';
+  document.getElementById('n_drug_history').value = data.drug_history || '';
+  document.getElementById('n_social').value = data.social_history || '';
   document.getElementById('n_exam').value = data.examination || '';
   document.getElementById('n_assessment').value = data.assessment || '';
   document.getElementById('n_plan').value = data.plan || '';
@@ -231,6 +276,9 @@ async function saveNote(sign) {
     author_id: meC.id,
     chief_complaint: document.getElementById('n_chief').value.trim(),
     history: document.getElementById('n_history').value.trim(),
+    past_medical_history: document.getElementById('n_pmh').value.trim(),
+    drug_history: document.getElementById('n_drug_history').value.trim(),
+    social_history: document.getElementById('n_social').value.trim(),
     examination: document.getElementById('n_exam').value.trim(),
     assessment: document.getElementById('n_assessment').value.trim(),
     plan: document.getElementById('n_plan').value.trim()
@@ -326,6 +374,8 @@ async function addDiagnosis() {
   if (error) { alert(error.message); return; }
   await logAudit('CREATE', 'CLINICAL', 'diagnoses', data.id, null, payload);
   document.getElementById('d_name').value = '';
+  const fuField = document.getElementById('fu_condition');
+  if (fuField && !fuField.value.trim()) fuField.value = name;
   await loadDiagnoses();
 }
 
@@ -630,6 +680,22 @@ function applyDosingSuggestion(g) {
   document.getElementById('rx_freq').value = g.frequency || '';
   document.getElementById('rx_duration').value = g.duration || '';
   if (g.notes) document.getElementById('rx_instructions').value = g.notes;
+}
+
+async function scheduleFollowUp() {
+  const condition = document.getElementById('fu_condition').value.trim();
+  const nextDate = document.getElementById('fu_date').value;
+  const statusBox = document.getElementById('fuStatus');
+  if (!condition || !nextDate) { statusBox.textContent = 'Enter a condition and a next review date.'; return; }
+
+  const payload = { patient_id: patient.id, condition_name: condition, next_review_date: nextDate, created_by: meC.id };
+  const { data, error } = await supabaseClient.from('chronic_care_followups').insert(payload).select().single();
+  if (error) { statusBox.textContent = 'Could not save: ' + error.message; return; }
+  await logAudit('CREATE', 'CLINICAL', 'chronic_care_followups', data.id, null, payload);
+
+  statusBox.textContent = `Added — ${patient.first_name} will show on the Appointments page recall list, due ${nextDate}.`;
+  document.getElementById('fu_condition').value = '';
+  document.getElementById('fu_date').value = '';
 }
 
 // ---------------- REFERRAL ----------------
