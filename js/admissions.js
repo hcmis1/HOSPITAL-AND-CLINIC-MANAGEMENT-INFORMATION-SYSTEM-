@@ -213,5 +213,5 @@ function printDischargeForm(admission, disposition) {
     <div class="row"><span class="label">Discharge disposition</span><span>${disposition}</span></div>
     <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Discharge summary</p>
   `;
-  openPrintDocument('Discharge Summary — ' + admission.admission_number, meAd.facilities ? meAd.facilities.name : 'HCMIS', body);
+  openPrintDocument('Discharge Summary — ' + admission.admission_number, meAd.facilities, body, { signedBy: meAd.full_name, signedRole: 'Attending Clinician' });
 }
