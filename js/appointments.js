@@ -47,7 +47,18 @@ let meA = null;
   });
   document.getElementById('rcEnrollBtn').addEventListener('click', enrollRecall);
 
+  let imSearchTimer;
+  document.getElementById('im_patient_search').addEventListener('input', (e) => {
+    clearTimeout(imSearchTimer);
+    const term = e.target.value.trim();
+    if (!term) { document.getElementById('imPatientResults').innerHTML = ''; return; }
+    imSearchTimer = setTimeout(() => searchImmunizationPatients(term), 250);
+  });
+  document.getElementById('imRecordBtn').addEventListener('click', recordImmunization);
+  document.getElementById('im_date').value = new Date().toISOString().slice(0, 10);
+
   await loadRecallList();
+  await loadRecentImmunizations();
 })();
 
 async function loadDepartmentOptions() {
@@ -289,4 +300,80 @@ async function removeFromRecall(id) {
   await supabaseClient.from('chronic_care_followups').update({ status: 'COMPLETED' }).eq('id', id);
   await logAudit('UPDATE', 'APPOINTMENTS', 'chronic_care_followups', id, null, { status: 'COMPLETED' });
   await loadRecallList();
+}
+
+// ---------------- IMMUNIZATION / EPI REGISTER ----------------
+async function searchImmunizationPatients(term) {
+  const { data } = await supabaseClient.from('patients').select('*')
+    .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,phone.ilike.%${term}%,mrn.ilike.%${term}%`)
+    .limit(8);
+  const box = document.getElementById('imPatientResults');
+  if (!data || data.length === 0) { box.innerHTML = '<div class="empty">No matches</div>'; return; }
+  box.innerHTML = data.map(p => `
+    <div class="link-btn" style="display:block; padding:6px 0;" onclick='selectImmunizationPatient(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+      ${p.first_name} ${p.last_name} · ${p.mrn} ${p.date_of_birth ? '· DOB ' + p.date_of_birth : ''}
+    </div>
+  `).join('');
+}
+
+async function selectImmunizationPatient(p) {
+  document.getElementById('im_patient_id').value = p.id;
+  document.getElementById('imSelectedPatient').innerHTML = `<span class="pill active">${p.first_name} ${p.last_name} · ${p.mrn}${p.date_of_birth ? ' · DOB ' + p.date_of_birth : ''}</span>`;
+  document.getElementById('imPatientResults').innerHTML = '';
+  document.getElementById('im_patient_search').value = '';
+  await loadPatientImmunizationHistory(p.id);
+}
+
+async function loadPatientImmunizationHistory(patientId) {
+  const { data } = await supabaseClient.from('immunizations_given').select('*').eq('patient_id', patientId).order('date_given');
+  const box = document.getElementById('imHistory');
+  if (!data || data.length === 0) { box.innerHTML = '<p class="empty">No immunizations recorded yet for this patient.</p>'; return; }
+  box.innerHTML = `<p style="font-weight:600; margin-bottom:4px;">Already given:</p>` +
+    data.map(im => `<span class="pill active" style="margin:2px;">${im.vaccine_name} (${im.date_given})</span>`).join(' ');
+}
+
+async function recordImmunization() {
+  const patientId = document.getElementById('im_patient_id').value;
+  const vaccine = document.getElementById('im_vaccine').value.trim();
+  const dateGiven = document.getElementById('im_date').value;
+  if (!patientId) { alert('Search for and select a patient first.'); return; }
+  if (!vaccine || !dateGiven) { alert('Enter a vaccine name and date given.'); return; }
+
+  const payload = {
+    patient_id: patientId, vaccine_name: vaccine, date_given: dateGiven,
+    batch_number: document.getElementById('im_batch').value.trim(),
+    site: document.getElementById('im_site').value.trim(),
+    notes: document.getElementById('im_notes').value.trim(),
+    given_by: meA.id
+  };
+  const { data, error } = await supabaseClient.from('immunizations_given').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'APPOINTMENTS', 'immunizations_given', data.id, null, payload);
+
+  document.getElementById('im_vaccine').value = '';
+  document.getElementById('im_batch').value = '';
+  document.getElementById('im_site').value = '';
+  document.getElementById('im_notes').value = '';
+  await loadPatientImmunizationHistory(patientId);
+  await loadRecentImmunizations();
+}
+
+async function loadRecentImmunizations() {
+  const { data } = await supabaseClient
+    .from('immunizations_given')
+    .select('*, patients(first_name, last_name, mrn)')
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  const tbody = document.getElementById('imRecentTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No immunizations recorded yet.</td></tr>'; return; }
+
+  tbody.innerHTML = data.map(im => `
+    <tr>
+      <td class="mono">${im.date_given}</td>
+      <td>${im.patients ? im.patients.first_name + ' ' + im.patients.last_name + ' · ' + im.patients.mrn : 'Unknown'}</td>
+      <td>${im.vaccine_name}</td>
+      <td>${im.batch_number || '—'}</td>
+    </tr>
+  `).join('');
 }
