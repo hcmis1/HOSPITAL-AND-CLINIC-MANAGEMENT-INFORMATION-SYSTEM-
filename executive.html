@@ -79,6 +79,24 @@
       <div class="panel-body"><canvas id="chartSource" height="120"></canvas></div>
     </div>
 
+    <div class="panel">
+      <div class="panel-header"><h3>Monthly facility summary report</h3></div>
+      <div class="panel-body">
+        <p class="empty" style="margin-top:-4px;">
+          Compiles the statistics HCMIS already tracks, organised under the general section
+          headings used in Uganda's HMIS 105/108 monthly returns (OPD attendance, diagnoses,
+          immunizations, HIV testing, lab tests, admissions/deliveries, financial summary).
+          <strong>This is not a verified exact replica of the official form</strong> — cross-check
+          row order and labels against your current HMIS 105/108 template or DHIS2 entry screen
+          before submitting. A few lines the official form asks for (antenatal care visits, family
+          planning) aren't tracked as distinct HCMIS modules yet, and are marked as such below.
+        </p>
+        <div class="field"><label>Month</label><input type="month" id="report_month"></div>
+        <button class="btn btn-primary" id="generateReportBtn" type="button">Generate report</button>
+        <div id="reportOutput" style="margin-top:16px;"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -86,6 +104,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/print-helpers.js"></script>
 <script src="js/executive.js"></script>
 </body>
 </html>
