@@ -98,9 +98,8 @@ function printPrescription() {
       <thead><tr><th>Medicine</th><th>Dose</th><th>Route</th><th>Frequency</th><th>Duration</th><th>Qty</th></tr></thead>
       <tbody>${currentRxItems.map(i => `<tr><td>${i.medicine_name}</td><td>${i.dose || ''}</td><td>${i.route || ''}</td><td>${i.frequency || ''}</td><td>${i.duration || ''}</td><td>${i.quantity || ''}</td></tr>`).join('')}</tbody>
     </table>
-    <p style="margin-top:20px;">Prescribed by: ${meC.full_name}</p>
   `;
-  openPrintDocument('Prescription ' + (currentRxNumber || ''), meC.facilities ? meC.facilities.name : 'HCMIS', body);
+  openPrintDocument('Prescription ' + (currentRxNumber || ''), meC.facilities, body, { signedBy: meC.full_name, signedRole: 'Prescribing Clinician' });
 }
 
 function calcAgeC(dob) {
@@ -617,7 +616,7 @@ function printReferral(r) {
     ${r.clinical_summary ? `<p><strong>Clinical summary</strong><br>${r.clinical_summary}</p>` : ''}
     ${r.diagnosis ? `<p><strong>Diagnosis</strong><br>${r.diagnosis}</p>` : ''}
   `;
-  openPrintDocument('Referral ' + r.referral_number, meC.facilities ? meC.facilities.name : 'HCMIS', body);
+  openPrintDocument('Referral ' + r.referral_number, meC.facilities, body, { signedBy: meC.full_name, signedRole: 'Referring Clinician' });
 }
 
 async function createReferral() {
