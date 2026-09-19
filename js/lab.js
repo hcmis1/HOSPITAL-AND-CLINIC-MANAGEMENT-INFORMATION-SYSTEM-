@@ -291,7 +291,7 @@ function printLabResult(item) {
     ${r && r.comment ? `<p><strong>Comment</strong><br>${r.comment}</p>` : ''}
     <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Validated result — laboratory report</p>
   `;
-  openPrintDocument('Lab Result — ' + item.lab_orders.order_number, meL.facilities ? meL.facilities.name : 'HCMIS', body);
+  openPrintDocument('Lab Result — ' + item.lab_orders.order_number, meL.facilities, body, { signedBy: meL.full_name, signedRole: 'Laboratory' });
 }
 
 async function loadCritical() {
@@ -528,5 +528,5 @@ function printWiReceipt(firstName, lastName, order, payment) {
     <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
     <p style="margin-top:20px; color:#4E6360; font-size:.85rem;">Present this slip when collecting results.</p>
   `;
-  openPrintDocument('Lab Order ' + order.order_number, meL.facilities ? meL.facilities.name : 'HCMIS', body);
+  openPrintDocument('Lab Order ' + order.order_number, meL.facilities, body, { documentType: 'receipt', signedBy: meL.full_name, signedRole: 'Laboratory' });
 }
