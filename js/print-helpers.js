@@ -7,11 +7,44 @@
 // WhatsApp among the apps offered. If the device doesn't support
 // file sharing, it downloads the image instead so it can be
 // attached manually.
+//
+// facility: pass the full facility object (e.g. meX.facilities),
+// not just its name — the letterhead uses name/address/phone/email.
+// options:
+//   documentType: 'receipt' shows a thank-you line; anything else
+//                 (default 'clinical') does not.
+//   signedBy:     name to print on the signature line (e.g. the
+//                 cashier, prescriber, or lab tech who issued it).
+//   signedRole:   short role/title shown under the name.
 // ==========================================================
 
-function openPrintDocument(title, facilityName, bodyHtml) {
+function openPrintDocument(title, facility, bodyHtml, options = {}) {
   const win = window.open('', '_blank');
   if (!win) { alert('Please allow pop-ups to print or share this document.'); return; }
+
+  // Backward-compatible: a plain string still works as just a name.
+  const f = (typeof facility === 'string') ? { name: facility } : (facility || {});
+  const facilityName = f.name || 'HCMIS';
+  const contactLine = [f.address, f.district, f.phone, f.email].filter(Boolean).join(' · ');
+
+  const documentType = options.documentType || 'clinical';
+  const signedBy = options.signedBy || null;
+  const signedRole = options.signedRole || null;
+
+  const thankYouHtml = documentType === 'receipt'
+    ? `<p style="margin-top:20px; text-align:center; font-style:italic; color:#175C58;">Thank you for choosing ${facilityName}. We wish you good health.</p>`
+    : '';
+
+  const signatureHtml = `
+    <div style="margin-top:36px; display:flex; justify-content:space-between; align-items:flex-end;">
+      <div style="width:60%;">
+        <div style="border-top:1px solid #12211F; padding-top:6px; font-size:.85rem;">
+          ${signedBy ? `<strong>${signedBy}</strong>${signedRole ? '<br>' + signedRole : ''}` : 'Authorized signature'}
+        </div>
+      </div>
+      <div style="font-size:.8rem; color:#4E6360;">Date: ______________</div>
+    </div>
+  `;
 
   win.document.write(`
 <!DOCTYPE html>
@@ -23,9 +56,11 @@ function openPrintDocument(title, facilityName, bodyHtml) {
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   body{font-family:'IBM Plex Sans',sans-serif; color:#12211F; max-width:640px; margin:24px auto; padding:0 16px;}
-  .doc-header{display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid #0F3A3B; padding-bottom:12px; margin-bottom:20px;}
-  .doc-header .facility{font-weight:700; font-size:1.1rem; color:#0F3A3B;}
+  .doc-header{border-bottom:2px solid #0F3A3B; padding-bottom:12px; margin-bottom:20px;}
+  .doc-header .facility-row{display:flex; justify-content:space-between; align-items:flex-end;}
+  .doc-header .facility{font-weight:700; font-size:1.15rem; color:#0F3A3B;}
   .doc-header .doctitle{font-family:'IBM Plex Mono',monospace; font-size:.85rem; color:#4E6360;}
+  .doc-header .contact{font-size:.78rem; color:#4E6360; margin-top:2px;}
   table{width:100%; border-collapse:collapse; margin:12px 0;}
   th,td{text-align:left; padding:6px 8px; border-bottom:1px solid #DCE6E3; font-size:.92rem;}
   th{color:#4E6360; font-size:.78rem;}
@@ -41,10 +76,13 @@ function openPrintDocument(title, facilityName, bodyHtml) {
 </head>
 <body>
   <div class="doc-header">
-    <div class="facility">${facilityName || 'HCMIS'}</div>
-    <div class="doctitle">${title}</div>
+    <div class="facility-row">
+      <div class="facility">${facilityName}</div>
+      <div class="doctitle">${title}</div>
+    </div>
+    ${contactLine ? `<div class="contact">${contactLine}</div>` : ''}
   </div>
-  <div id="printArea">${bodyHtml}</div>
+  <div id="printArea">${bodyHtml}${thankYouHtml}${signatureHtml}</div>
   <div class="actions">
     <button class="primary" onclick="window.print()">Print</button>
     <button onclick="shareDoc()">Share</button>
