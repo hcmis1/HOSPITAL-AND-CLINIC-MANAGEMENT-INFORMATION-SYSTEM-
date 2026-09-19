@@ -87,10 +87,14 @@ function renderInvoices(term) {
   `).join('');
 }
 
+let currentInvoiceData = null;
+let currentInvoiceItemsData = null;
+
 async function openInvoiceDetail(id) {
   currentInvoiceId = id;
   const { data: inv } = await supabaseClient.from('invoices').select('*, patients(first_name, last_name, mrn)').eq('id', id).single();
   if (!inv) return;
+  currentInvoiceData = inv;
 
   document.getElementById('invTitle').textContent = inv.invoice_number;
   document.getElementById('invMeta').innerHTML = `
@@ -106,6 +110,7 @@ async function openInvoiceDetail(id) {
   `;
 
   const { data: items } = await supabaseClient.from('invoice_items').select('*').eq('invoice_id', id).order('created_at');
+  currentInvoiceItemsData = items || [];
   document.getElementById('invItemsTable').innerHTML = (items || []).map(i => `
     <tr>
       <td>${i.description}</td>
@@ -122,7 +127,10 @@ async function openInvoiceDetail(id) {
       <tr><td colspan="5" style="border:none; padding-top:16px;"><strong>Payments</strong></td></tr>` +
       payments.map(p => `
         <tr><td colspan="2" class="mono">${p.payment_number} · ${new Date(p.payment_date).toLocaleString('en-GB')}</td><td>${p.payment_method}</td><td>${parseFloat(p.amount).toLocaleString()}</td>
-        <td>${p.status === 'COMPLETED' ? `<button class="link-btn danger" onclick="requestRefund('${p.id}','${id}')">Request refund</button>` : p.status}</td></tr>
+        <td>
+          <button class="link-btn" onclick='printReceipt(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Print</button>
+          ${p.status === 'COMPLETED' ? ` · <button class="link-btn danger" onclick="requestRefund('${p.id}','${id}')">Refund</button>` : ''}
+        </td></tr>
       `).join('');
   }
 
@@ -258,6 +266,42 @@ async function decideRefund(id, status, invoiceId, amount) {
   await loadRefunds();
   await loadInvoices();
   await loadStats();
+}
+
+function printInvoice() {
+  if (!currentInvoiceData) return;
+  const inv = currentInvoiceData;
+  const items = currentInvoiceItemsData || [];
+  const body = `
+    <div class="row"><span class="label">Invoice</span><span class="mono">${inv.invoice_number}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${inv.invoice_date}</span></div>
+    <div class="row"><span class="label">Patient</span><span>${inv.patients.first_name} ${inv.patients.last_name} · ${inv.patients.mrn}</span></div>
+    <table>
+      <thead><tr><th>Description</th><th>Qty</th><th>Unit price</th><th>Total</th></tr></thead>
+      <tbody>${items.map(i => `<tr><td>${i.description}</td><td>${i.quantity}</td><td>${parseFloat(i.unit_price).toLocaleString()}</td><td>${parseFloat(i.total).toLocaleString()}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="row"><span class="label">Subtotal</span><span>${parseFloat(inv.subtotal).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Discount</span><span>${parseFloat(inv.discount).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Tax</span><span>${parseFloat(inv.tax).toLocaleString()}</span></div>
+    <div class="row total-row"><span>Total</span><span>${parseFloat(inv.total).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Paid</span><span>${parseFloat(inv.amount_paid).toLocaleString()}</span></div>
+    <div class="row"><span class="label">Balance</span><span>${parseFloat(inv.balance).toLocaleString()}</span></div>
+  `;
+  openPrintDocument('Invoice ' + inv.invoice_number, meB.facilities, body, { documentType: 'receipt', signedBy: meB.full_name, signedRole: 'Billing Officer' });
+}
+
+function printReceipt(payment) {
+  const inv = currentInvoiceData;
+  const body = `
+    <div class="row"><span class="label">Receipt</span><span class="mono">${payment.payment_number}</span></div>
+    <div class="row"><span class="label">Date</span><span class="mono">${new Date(payment.payment_date).toLocaleString('en-GB')}</span></div>
+    ${inv ? `<div class="row"><span class="label">Patient</span><span>${inv.patients.first_name} ${inv.patients.last_name} · ${inv.patients.mrn}</span></div>
+    <div class="row"><span class="label">Invoice</span><span class="mono">${inv.invoice_number}</span></div>` : ''}
+    <div class="row"><span class="label">Method</span><span>${payment.payment_method}</span></div>
+    ${payment.transaction_reference ? `<div class="row"><span class="label">Reference</span><span>${payment.transaction_reference}</span></div>` : ''}
+    <div class="row total-row"><span>Amount paid</span><span>${parseFloat(payment.amount).toLocaleString()}</span></div>
+  `;
+  openPrintDocument('Receipt ' + payment.payment_number, meB.facilities, body, { documentType: 'receipt', signedBy: meB.full_name, signedRole: 'Cashier' });
 }
 
 // ---------------- SERVICE CATALOGUE ----------------
