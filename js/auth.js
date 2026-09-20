@@ -46,7 +46,59 @@ async function requireAuth() {
     document.body.innerHTML = '<p style="padding:40px;font-family:sans-serif;">Your account is not active. Contact your administrator.</p>';
     return null;
   }
+  startIdleTimer(appUser.role);
   return appUser;
+}
+
+// ----------------------------------------------------------------
+// Session idle timeout. Per security review: clinical roles get 15
+// minutes of inactivity before automatic logout, admin/management
+// roles get 30 -- an unattended, still-logged-in terminal is a real
+// exposure for patient data. Runs once per page load (guarded by
+// _idleTimerStarted) since every page's init() calls requireAuth().
+// ----------------------------------------------------------------
+let _idleTimerStarted = false;
+let _idleTimeoutHandle = null;
+let _idleWarningHandle = null;
+
+function startIdleTimer(role) {
+  if (_idleTimerStarted) return;
+  _idleTimerStarted = true;
+
+  const adminRoles = ['SUPER_ADMIN', 'FACILITY_ADMIN'];
+  const timeoutMinutes = adminRoles.includes(role) ? 30 : 15;
+  const timeoutMs = timeoutMinutes * 60 * 1000;
+  const warningMs = timeoutMs - 60 * 1000; // warn 1 minute before
+
+  function resetTimer() {
+    clearTimeout(_idleTimeoutHandle);
+    clearTimeout(_idleWarningHandle);
+    _idleWarningHandle = setTimeout(() => {
+      if (!confirm('You will be signed out in 1 minute due to inactivity. Click OK to stay signed in.')) return;
+      resetTimer();
+    }, warningMs);
+    _idleTimeoutHandle = setTimeout(async () => {
+      alert('You have been signed out due to inactivity.');
+      await logout();
+    }, timeoutMs);
+  }
+
+  ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt =>
+    document.addEventListener(evt, resetTimer, { passive: true })
+  );
+  resetTimer();
+}
+
+// Shows a generic, safe message to the user instead of a raw
+// database/API error (which can reveal table names, constraints,
+// or internal structure). The real error still goes to the
+// browser console for whoever's debugging.
+// Usage: replace `alert(error.message)` with `showError(error)`,
+// or `showError(error, 'Could not save this prescription')` for a
+// more specific-but-still-safe message.
+function showError(error, friendlyMessage) {
+  console.error('HCMIS error:', error);
+  alert(friendlyMessage || 'Something went wrong. Please try again, and contact IT support if it continues.');
 }
 
 async function requireAdmin() {
