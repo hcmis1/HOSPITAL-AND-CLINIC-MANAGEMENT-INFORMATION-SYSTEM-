@@ -59,6 +59,7 @@
       <button class="tab-btn active" data-tab="requisitions">Requisitions</button>
       <button class="tab-btn" data-tab="orders">Purchase orders</button>
       <button class="tab-btn" data-tab="suppliers">Suppliers</button>
+      <button class="tab-btn" data-tab="store">Inventory / Store</button>
     </div>
 
     <!-- REQUISITIONS -->
@@ -160,6 +161,81 @@
         </div>
       </div>
     </div>
+
+  <div class="tab-panel" id="tab-store">
+    <div class="panel">
+      <div class="panel-header"><h3>Add item to catalogue</h3></div>
+      <div class="panel-body">
+        <form id="storeItemForm">
+          <div class="grid-2">
+            <div class="field"><label>Item name</label><input type="text" id="si_name" required></div>
+            <div class="field"><label>Category</label><input type="text" id="si_category" placeholder="e.g. Sharps, PPE, Dressings, IV supplies"></div>
+            <div class="field"><label>Unit</label><input type="text" id="si_unit" placeholder="piece / box / pack" value="piece"></div>
+            <div class="field"><label>Reorder level</label><input type="number" id="si_reorder" value="0"></div>
+          </div>
+          <button type="submit" class="btn btn-primary">Add item</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel" id="lowStockPanel" style="display:none;">
+      <div class="panel-header"><h3>Low stock alerts</h3></div>
+      <div class="panel-body" id="lowStockList"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Receive stock</h3></div>
+      <div class="panel-body">
+        <form id="storeBatchForm">
+          <div class="grid-2">
+            <div class="field"><label>Item</label><select id="sb_item" required></select></div>
+            <div class="field"><label>Quantity received</label><input type="number" id="sb_qty" required></div>
+            <div class="field"><label>Batch number (optional)</label><input type="text" id="sb_batch"></div>
+            <div class="field"><label>Expiry date (if applicable)</label><input type="date" id="sb_expiry"></div>
+            <div class="field"><label>Unit cost (optional)</label><input type="number" step="0.01" id="sb_cost"></div>
+            <div class="field"><label>Supplier</label><input type="text" id="sb_supplier"></div>
+          </div>
+          <button type="submit" class="btn btn-primary">Record receipt</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Issue stock</h3></div>
+      <div class="panel-body">
+        <form id="storeIssueForm">
+          <div class="grid-2">
+            <div class="field"><label>Item</label><select id="is_item" required></select></div>
+            <div class="field"><label>Quantity</label><input type="number" id="is_qty" required></div>
+            <div class="field"><label>Department / Ward</label><input type="text" id="is_department" placeholder="e.g. OPD, Maternity, Nursing"></div>
+            <div class="field"><label>Issued to (name, optional)</label><input type="text" id="is_to"></div>
+          </div>
+          <div class="field"><label>Purpose (optional)</label><input type="text" id="is_purpose"></div>
+          <button type="submit" class="btn btn-primary">Issue stock</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Current stock</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th>Item</th><th>Category</th><th>In stock</th><th>Reorder level</th></tr></thead>
+          <tbody id="storeStockTable"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>Recent issuances</h3></div>
+      <div class="panel-body">
+        <table>
+          <thead><tr><th class="mono">Date</th><th>Item</th><th>Qty</th><th>Department</th><th>Issued to</th><th>By</th></tr></thead>
+          <tbody id="storeIssuanceTable"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
   </div>
 </div>
