@@ -4,6 +4,7 @@
 
 let mePr = null;
 let currentPoId = null;
+let isProcAdmin = false;
 
 (async function init() {
   mePr = await requireAuth();
@@ -13,6 +14,7 @@ let currentPoId = null;
   document.getElementById('whoRole').textContent = mePr.role;
   document.getElementById('facilityName').textContent =
     (mePr.facilities && mePr.facilities.name) ? mePr.facilities.name : 'No facility assigned';
+  isProcAdmin = ['SUPER_ADMIN', 'FACILITY_ADMIN'].includes(mePr.role);
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -28,10 +30,16 @@ let currentPoId = null;
   document.getElementById('markSentBtn').addEventListener('click', markSent);
   document.getElementById('receiveGoodsBtn').addEventListener('click', recordGoodsReceived);
 
+  document.getElementById('storeItemForm').addEventListener('submit', addStoreItem);
+  document.getElementById('storeBatchForm').addEventListener('submit', receiveStoreBatch);
+  document.getElementById('storeIssueForm').addEventListener('submit', issueStoreStock);
+
   await loadDepartmentOptions();
   await loadSuppliers();
   await loadRequisitions();
   await loadPOs();
+  await loadStoreCatalogue();
+  await loadRecentIssuances();
 })();
 
 async function loadDepartmentOptions() {
@@ -217,7 +225,131 @@ async function recordGoodsReceived() {
   await supabaseClient.from('purchase_orders').update({ status: 'RECEIVED' }).eq('id', currentPoId);
   await logAudit('CREATE', 'PROCUREMENT', 'goods_received', gr.id, null, { purchase_order_id: currentPoId });
 
-  alert('Goods received recorded. Remember to add matching stock batches in Pharmacy if these were medicines.');
+  alert('Goods received recorded. Remember to add matching stock in Pharmacy (medicines) or the Inventory/Store tab (general supplies).');
   await openPoDetail(currentPoId);
   await loadPOs();
+}
+
+// ---------------- INVENTORY / STORE ----------------
+async function addStoreItem(e) {
+  e.preventDefault();
+  const payload = {
+    name: document.getElementById('si_name').value.trim(),
+    category: document.getElementById('si_category').value.trim(),
+    unit: document.getElementById('si_unit').value.trim() || 'piece',
+    reorder_level: parseFloat(document.getElementById('si_reorder').value) || 0
+  };
+  const { data, error } = await supabaseClient.from('store_items').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'PROCUREMENT', 'store_items', data.id, null, payload);
+  document.getElementById('storeItemForm').reset();
+  await loadStoreCatalogue();
+}
+
+async function receiveStoreBatch(e) {
+  e.preventDefault();
+  const quantity = parseFloat(document.getElementById('sb_qty').value);
+  const payload = {
+    item_id: document.getElementById('sb_item').value,
+    quantity_received: quantity,
+    quantity_remaining: quantity,
+    batch_number: document.getElementById('sb_batch').value.trim(),
+    expiry_date: document.getElementById('sb_expiry').value || null,
+    unit_cost: parseFloat(document.getElementById('sb_cost').value) || null,
+    supplier: document.getElementById('sb_supplier').value.trim(),
+    received_by: mePr.id
+  };
+  const { data, error } = await supabaseClient.from('store_batches').insert(payload).select().single();
+  if (error) { alert(error.message); return; }
+  await logAudit('CREATE', 'PROCUREMENT', 'store_batches', data.id, null, payload);
+  document.getElementById('storeBatchForm').reset();
+  await loadStoreCatalogue();
+}
+
+async function issueStoreStock(e) {
+  e.preventDefault();
+  const itemId = document.getElementById('is_item').value;
+  let qtyNeeded = parseFloat(document.getElementById('is_qty').value);
+  if (!qtyNeeded || qtyNeeded <= 0) { alert('Enter a quantity greater than zero.'); return; }
+
+  const { data: batches } = await supabaseClient.from('store_batches').select('*')
+    .eq('item_id', itemId).gt('quantity_remaining', 0)
+    .order('expiry_date', { ascending: true, nullsFirst: false })
+    .order('received_date', { ascending: true });
+
+  const available = (batches || []).reduce((sum, b) => sum + parseFloat(b.quantity_remaining), 0);
+  if (qtyNeeded > available) { alert(`Insufficient stock — only ${available} available.`); return; }
+
+  const department = document.getElementById('is_department').value.trim();
+  const issuedTo = document.getElementById('is_to').value.trim();
+  const purpose = document.getElementById('is_purpose').value.trim();
+
+  for (const batch of batches) {
+    if (qtyNeeded <= 0) break;
+    const take = Math.min(qtyNeeded, parseFloat(batch.quantity_remaining));
+    await supabaseClient.from('store_batches').update({ quantity_remaining: batch.quantity_remaining - take }).eq('id', batch.id);
+    const { data: issuance } = await supabaseClient.from('store_issuances').insert({
+      item_id: itemId, batch_id: batch.id, quantity_issued: take,
+      department, issued_to: issuedTo, purpose, issued_by: mePr.id
+    }).select().single();
+    await logAudit('CREATE', 'PROCUREMENT', 'store_issuances', issuance.id, null, { item_id: itemId, quantity: take });
+    qtyNeeded -= take;
+  }
+
+  document.getElementById('storeIssueForm').reset();
+  await loadStoreCatalogue();
+  await loadRecentIssuances();
+}
+
+async function loadStoreCatalogue() {
+  const { data: items } = await supabaseClient.from('store_items').select('*').eq('status', 'ACTIVE').order('name');
+  const { data: batches } = await supabaseClient.from('store_batches').select('item_id, quantity_remaining');
+
+  const balances = {};
+  (batches || []).forEach(b => { balances[b.item_id] = (balances[b.item_id] || 0) + parseFloat(b.quantity_remaining); });
+
+  const itemSel = document.getElementById('sb_item');
+  const issueSel = document.getElementById('is_item');
+  if (itemSel) itemSel.innerHTML = (items || []).map(i => `<option value="${i.id}">${i.name}</option>`).join('');
+  if (issueSel) issueSel.innerHTML = (items || []).map(i => `<option value="${i.id}">${i.name} (${balances[i.id] || 0} ${i.unit} in stock)</option>`).join('');
+
+  const tbody = document.getElementById('storeStockTable');
+  if (!items || items.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="empty">No items in the store catalogue yet.</td></tr>'; return; }
+  tbody.innerHTML = items.map(i => {
+    const stock = balances[i.id] || 0;
+    const low = stock <= i.reorder_level;
+    return `<tr ${low ? 'style="background:#FDECEC;"' : ''}><td>${i.name}${low ? ' <strong>(low)</strong>' : ''}</td><td>${i.category || '—'}</td><td class="mono">${stock} ${i.unit}</td><td>${i.reorder_level}</td></tr>`;
+  }).join('');
+
+  const lowStockItems = items.filter(i => (balances[i.id] || 0) <= i.reorder_level);
+  const lowPanel = document.getElementById('lowStockPanel');
+  if (lowStockItems.length > 0) {
+    lowPanel.style.display = 'block';
+    document.getElementById('lowStockList').innerHTML = lowStockItems.map(i =>
+      `<span class="pill inactive" style="margin:2px;">${i.name}: ${balances[i.id] || 0} ${i.unit} left (reorder at ${i.reorder_level})</span>`
+    ).join(' ');
+  } else {
+    lowPanel.style.display = 'none';
+  }
+}
+
+async function loadRecentIssuances() {
+  const { data } = await supabaseClient
+    .from('store_issuances')
+    .select('*, store_items(name), app_users(full_name)')
+    .order('issued_at', { ascending: false })
+    .limit(30);
+
+  const tbody = document.getElementById('storeIssuanceTable');
+  if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No issuances recorded yet.</td></tr>'; return; }
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td class="mono">${new Date(r.issued_at).toLocaleString('en-GB')}</td>
+      <td>${r.store_items ? r.store_items.name : '—'}</td>
+      <td class="mono">${r.quantity_issued}</td>
+      <td>${r.department || '—'}</td>
+      <td>${r.issued_to || '—'}</td>
+      <td>${r.app_users ? r.app_users.full_name : '—'}</td>
+    </tr>
+  `).join('');
 }
