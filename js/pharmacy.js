@@ -284,14 +284,14 @@ async function completeSale() {
     const { data: newPatient, error: patErr } = await supabaseClient.from('patients').insert({
       first_name: firstName, last_name: lastName, sex, phone, facility_id: meP.facility_id || null, created_by: meP.id
     }).select().single();
-    if (patErr) { alert(patErr.message); return; }
+    if (patErr) { showError(patErr, 'Could not register the walk-in customer.'); return; }
     patientId = newPatient.id;
   }
 
   const { data: invoice, error: invErr } = await supabaseClient.from('invoices').insert({
     patient_id: patientId, facility_id: meP.facility_id || null, created_by: meP.id
   }).select().single();
-  if (invErr) { alert(invErr.message); return; }
+  if (invErr) { showError(invErr, 'Could not create the invoice.'); return; }
 
   for (const c of posCart) {
     const eligible = batchesCache
@@ -318,7 +318,7 @@ async function completeSale() {
     payment_method: document.getElementById('pos_method').value,
     transaction_reference: document.getElementById('pos_ref').value.trim(), received_by: meP.id
   }).select().single();
-  if (payErr) { alert(payErr.message); return; }
+  if (payErr) { showError(payErr, 'Could not record the payment.'); return; }
 
   await supabaseClient.from('invoices').update({ amount_paid: freshInvoice.total }).eq('id', invoice.id);
   await recalcInvoiceTotals(invoice.id);
